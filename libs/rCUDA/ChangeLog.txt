@@ -1,0 +1,101 @@
+22-Feb-13: v4.0.1
+	- Fixed cudaHostRegister/cudaHostUnregister bugs (carregon)
+	- Optimized asynchronous calls management (carregon)
+
+14-Dic-12: v4.0
+	- Updated API to CUDA 5.0 (adcastel & carregon)
+
+24-Nov-12: v4.0b
+	- Fixed bug in IB module causing cudaSetDeviceFlags to fail. (apenya)
+	- Fixed bug in IB module potentially causing some receive calls in server to obtain incorrect data. (apenya)
+	- Added binary compatibility with CUDA. (carregon)
+
+06-Ago-12: v4.0a
+	- rCUDAd option "-n" doesn't allow an extra server. (apenya)
+	- Added multi-GPU-module support. (apenya)
+	- Pipelined GPU and network transfers. (apenya)
+	- TCP and InfiniBand communication modules. (apenya)
+	- Decoupled communications. (apenya)
+	- Added support for MVAPICH2 and OpenMPI 1.3+. (apenya)
+	- Added support for IPC functions. (adcastel)
+	- Multi-thread support. (carregon)
+	- Multi-server support. (carregon)
+
+27-Apr-12: v3.2
+	- Updated API to CUDA 4.2. IPC functions not supported. (adcastel)
+
+17-Apr-12: v3.1.3
+	- Lock file bug fixed involving wrong file permissions. (adcastel)
+
+16-Feb-12: v3.1.2
+	- CUDA 4.1 toolkit, driver and sdk supported (adcastel)
+
+18-Jan-12: v3.1.1
+	- Added complete support for simple precision CUBLAS routines. (adcastel)
+
+04-Oct-11: v3.1
+	- Added support for modules "Peer Device Memory Access" and "Unified Addressing". (carregon)
+	- Fixed low level Surface Reference management functions. (carregon)
+	- Fixed Malloc Array bugs. (carregon)
+
+06-Jul-11: v3.0a
+        - Partially updated API to 4.0. New modules "Peer Device Memory Access" and
+          "Unified Addressing" not supported. (carregon)
+	- Added compatibility support with CUDA 4.0 environment: libraries (server) and header files (client). (carregon)
+	- Fixed 3D Malloc/Memcpy bugs. (apenya)
+	- Further improved "cudaLaunch" call by avoiding double checking hash table. (apenya)
+	- Updated paper reference suggestions.
+
+** Development prior to rCUDA 3 by apenya **
+
+23-May-11: v2.0.3a
+	- Partially fixed Malloc3D bugs. It still needs further review for some cases.
+
+26-Jan-11: v2.0.2
+	- Fixed stream order
+	- Improved "cudaLaunch" call by buffering "preCudaLaunch" results
+
+19-Jan-11: v2.0.1
+	- Fix: included "sys/stat.h" header file preventing compilation rCUDAl.cpp on some systems
+	- Fixed "make install" script on rCUDAl
+
+19-Nov-10: v2.0
+        - Updated API to 3.1
+	- Server now uses Runtime API when possible (CUDA >= 3.1 required).
+        - Introduced support for the most common CUBLAS routines.
+	- Fixed some bugs.
+	- Updated paper reference suggestions.
+	- Added AF_UNIX sockets support to enhance performance on local executions (-l).
+	- Added some load balancing capabilities to the server (-b).
+	- General performance improvements.
+	- Officially added Fermi support.
+	- Added restriction: client and server must both feature 32 or 64 bit architectures
+
+02-Jun-10: v1.0.3
+	- Introduced additional error checks in "cudaMemcpy" (server side).
+	- Fixed Volkov's sgemm example to use randomly generated data.
+
+24-May-10: v1.0.2
+	- Added support to change GPU server on the fly (setenv + cudaThreadExit): the TCP
+          connection is now reset by cudaThreadExit and the RCUDA environment variable is
+          re-read before attempting a new connection.
+	- Fixed: the rCUDA library now issues a warning if the repository directory is not
+          found.
+	- Added Volkov's sgemm example.
+	- Added libcudart.so symbolic link in rCUDAl Makefile.
+
+22-Apr-10: v1.0.1
+	- Fixed: cudaThreadExit hangs in some situations. Also made improvements to avoid
+          resending the GPU image.
+	- Introduced TIMEIT mode: if compiled with -DTIMEIT, client and server track their
+          respective time spent on sending data through the network.
+	- Updated VHPC paper reference.
+
+01-Apr-10: v1.0
+	- Initial release.
+
+Maintained by:
+	- Antonio J. Peña (apenya@gap.upv.es), Technical University of Valencia (Spain)
+	- Carlos Reaño (carregon@gap.upv.es), Technical University of Valencia (Spain)
+	- Adrian Castello (adcastel@icc.uji.es), Jaume I University of Castellon (Spain)
+

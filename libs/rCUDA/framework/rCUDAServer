@@ -1,0 +1,66 @@
+#!/usr/bin/python
+
+import os
+import subprocess
+from optparse import OptionParser
+
+def parse_args():
+    parser = OptionParser()
+    parser.add_option('-t', '--network-type', dest = 'network_type',
+        choices = ['IB', 'TCP', 'LOCAL',],
+        default = 'TCP',
+        help = 'type of network for rCUDA (IB, TCP, LOCAL) [default = TCP].'
+    )
+    parser.add_option('-n', '--number-of-devices', type = 'int',
+        default = 1,
+        dest = 'number_of_devices',
+        help = 'number of GPU devices to be used [default = 1].'
+    )
+    parser.add_option('-i', action = 'store_true',
+        default = False,
+        dest = 'interactive',
+        help = 'Enable interactive mode [default = false].',
+    )
+    parser.add_option('-p', '--port', type = 'int',
+        default = 8308,
+        dest = 'port',
+        help = 'Port number [default = 8308].',
+    )
+    return parser.parse_args()
+
+def main(options, args):
+    framework_directory = os.path.dirname(os.path.abspath(__file__))
+    rCUDAd_directory = os.path.join(framework_directory, 'rCUDAd') 
+    rCUDAd_program = os.path.join(rCUDAd_directory, 'rCUDAd')
+    ld_lib_path = rCUDAd_directory + ':' + '/opt/cuda/tk5.0/lib64'
+
+    program_args = [rCUDAd_program, '-p', str(options.port),]
+    if options.interactive:
+        program_args.append('-i')
+        program_args.append('-v')
+    
+    if options.network_type == 'LOCAL':
+        program_args.append('-l')
+        options.network_type = 'TCP'
+    
+    environment = {
+        'LD_LIBRARY_PATH': ld_lib_path,
+        'RCUDAPROTO': options.network_type,
+        'RCUDA_DEVICE_COUNT': str(options.number_of_devices),
+    }
+
+    i = 0
+    while i < options.number_of_devices:
+        environment['RCUDA_DEVICE_' + str(i)] = '0.0.0.0@' + str(options.port) + ':' + str(i)
+        i += 1
+
+    p = subprocess.Popen(
+        program_args,
+        cwd = rCUDAd_directory,
+        env = environment
+    )
+    p.wait()
+
+if __name__ == '__main__':
+    options, args = parse_args()
+    main(options, args)

@@ -1,0 +1,4 @@
+*.o
+*.swp
+src/libcudart.so.5.0
+test/hello
