@@ -25,6 +25,17 @@ __global__ void matmul(float *A, float *B, float *C,
     C[i*n+j] = sum;
 }
 
+__global__ void thread_matrix(float *A,
+                       int l, int n)
+{
+    int i, j;
+
+    i = blockIdx.y * blockDim.y + threadIdx.y;
+    j = blockIdx.x * blockDim.x + threadIdx.x;
+
+    A[i * n + j] = i * n + j;
+}
+
 void matmul_cpu(float *A, float *B, float *C,
                        int l, int m, int n)
 {
@@ -40,24 +51,21 @@ void matmul_cpu(float *A, float *B, float *C,
     }
 }
 
-int compare_matrix(float *A, float *B, int l, int n)
+void print_matrix(float *A, int l, int n)
 {
     int i, j;
-    int ret = 0;
     for (i = 0; i < l; i++) {
         for (j = 0; j < n; j++) {
             printf("%f ", A[i * n + j]);
         }
         printf("\n");
     }
-    printf("\n");
-    for (i = 0; i < l; i++) {
-        for (j = 0; j < n; j++) {
-            printf("%f ", B[i * n + j]);
-        }
-        printf("\n");
-    }
-    printf("\n");
+}
+
+int compare_matrix(float *A, float *B, int l, int n)
+{
+    int i, j;
+    int ret = 0;
     for (i = 0; i < l; i++) {
         for (j = 0; j < n; j++) {
             if(A[i * n + j] != B[i * n + j])
@@ -136,6 +144,10 @@ int main(int argc, char *argv[])
     cudaMemcpy(Ch, Cd, sizeof(float) * L * N, cudaMemcpyDeviceToHost);
     float *C_cpu = (float *)malloc(sizeof(float) * L * N);
     matmul_cpu(Ah, Bh, C_cpu, L, M, N);
+    print_matrix(Ch, L, N);
+    printf("\n");
+    print_matrix(C_cpu, L, N);
+    printf("\n");
 
     if(compare_matrix(Ch, C_cpu, L, N) >= 0)
         printf("OK\n");
@@ -144,10 +156,23 @@ int main(int argc, char *argv[])
 
     /* Switch to native */
     cudaMalloc(NULL, 0);
+    printf("Switched to native.....\n");
+    printf("Press enter to continue...\n");
+    getchar();
+
+    thread_matrix<<<dim3(N / BS, L / BS),
+            dim3(BS, BS)>>>(Cd, L, N);
+    cudaMemcpy(Ch, Cd, sizeof(float) * L * N, cudaMemcpyDeviceToHost);
+    print_matrix(Ch, L, N);
+    printf("\n");
 
     matmul<<<dim3(N / BS, L / BS),
             dim3(BS, BS)>>>(Ad, Bd, Cd, L, M, N);
     cudaMemcpy(Ch, Cd, sizeof(float) * L * N, cudaMemcpyDeviceToHost);
+    print_matrix(Ch, L, N);
+    printf("\n");
+    print_matrix(C_cpu, L, N);
+    printf("\n");
     if(compare_matrix(Ch, C_cpu, L, N) >= 0)
         printf("OK\n");
     else
