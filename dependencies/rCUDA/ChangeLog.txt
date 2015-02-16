@@ -1,3 +1,29 @@
+28-Oct-14: v5.0
+	- CUDA Driver API support added. (adcastel)
+	- Updated API to CUDA 6.5. (adcastel)
+	- Added complete support for CURAND routines (adcastel)
+	- Fixed cudaSetDevice bug. (carregon)
+
+31-May-14: v4.2
+	- Updated API to CUDA 6.0. (adcastel)
+	- New stream management (adcastel)
+	- cublasSetKernelStream and cublasSetStream functions are asynchronous (adcastel)
+	- Fixed cudaDeviceCanAccessPeer bug (carregon)
+	- Fixed cudaMemcpy2D bug (carregon)
+	- Added complete support for CUSPARSE routines (cerveras & adcastel)
+
+28-Mar-14: v4.1.1
+	- Fixed bug in peer access device. (carregon)
+
+25-Feb-14: v4.1
+	- Updated API to CUDA 5.5. (adcastel)
+	- Added complete support for simple and double precision CUBLAS v2 and CUBLAS legacy routines. (cerveras & adcastel)
+	- Added complete support for CUFFT routines. (cerveras)
+	- Fixed bug in IB module causing cudaMemcpy2DAsync to fail. (adcastel)
+	- Fixed cudaMemcpy2D bug. (adcastel)
+	- Fixed cudaCreateTextureObject bug. (carregon)
+	- Added support for Mellanox Connect-IB network adapters (carregon)
+
 22-Feb-13: v4.0.1
 	- Fixed cudaHostRegister/cudaHostUnregister bugs (carregon)
 	- Optimized asynchronous calls management (carregon)
