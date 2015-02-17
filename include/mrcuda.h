@@ -163,12 +163,31 @@ MRCUDASym *mrcudaSymNvidia;
 MRCUDASym *mrcudaSymRCUDA;
 MRCUDASym *mrcudaSymDefault;
 
-int mrcuda_init();
+/**
+ * Initialize mrCUDA.
+ * Print error and terminate the program if an error occurs.
+ */
+void mrcuda_init();
+
+/**
+ * Finalize mrCUDA.
+ */
 int mrcuda_fini();
 
-int mrcuda_switch();
 
+/**
+ * Switch from rCUDA to native.
+ */
+void mrcuda_switch();
+
+/**
+ * Create a barrier such that subsequent calls are blocked until the barrier is released.
+ */
 void mrcuda_function_call_lock();
+
+/**
+ * Release the barrier; thus, allow subsequent calls to be processed normally.
+ */
 void mrcuda_function_call_release();
 
 #endif
