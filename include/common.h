@@ -1,8 +1,6 @@
 #ifndef __MRCUDA_COMMON__HEADER__
 #define __MRCUDA_COMMON__HEADER__
 
-#define DEBUG 1
-
 #if DEBUG
     #define DPRINTF(...) \
         do {fprintf(stderr,  __VA_ARGS__);} while(0);
