@@ -125,7 +125,7 @@ void mrcuda_record_cudaCreateChannelDesc(int x, int y, int z, int w, enum cudaCh
 /**
  * Record a cudaSetDeviceFlags call.
  */
-void mrcuda_record_cudaSetDeviceFalgs(unsigned int flags);
+void mrcuda_record_cudaSetDeviceFlags(unsigned int flags);
 
 /**
  * Record a cudaStreamCreate call.
