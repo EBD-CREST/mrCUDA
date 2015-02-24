@@ -1,6 +1,8 @@
 #ifndef __MRCUDA_COMM__HEADER__
 #define __MRCUDA_COMM__HEADER__
 
+#include "common.h"
+
 /**
  * This function starts listening to a signal that tells the system to switch to native CUDA.
  * After it receives the signal, this function calls the callback and terminates the socket.
