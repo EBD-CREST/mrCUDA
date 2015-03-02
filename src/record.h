@@ -3,10 +3,12 @@
 
 #include <cuda_runtime.h>
 
+#include "common.h"
+
 typedef struct MRecord
 {
     char *functionName;
-    union Data
+    union 
     {
         struct cudaRegisterFatBinary
         {
@@ -76,6 +78,9 @@ typedef struct MRecord
     struct MRecord *next;
 } MRecord;
 
+extern MRecord *mrcudaRecordHeadPtr;
+extern MRecord *mrcudaRecordTailPtr;
+
 
 /**
  * Record a cudaRegisterFatBinary call.
@@ -137,12 +142,12 @@ void mrcuda_record_cudaStreamCreate();
 /**
  * Replay a cudaRegisterFatBinary call.
  */
-void mrcuda_record_cudaRegisterFatBinary(MRecord* record );
+void mrcuda_replay_cudaRegisterFatBinary(MRecord* record);
 
 /**
  * Replay a cudaRegisterFunction call.
  */
-void mrcuda_record_cudaRegisterFunction(MRecord* record);
+void mrcuda_replay_cudaRegisterFunction(MRecord* record);
 
 /**
  * Replay a cudaMemcpyToSymbol call.

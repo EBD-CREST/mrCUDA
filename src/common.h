@@ -3,8 +3,6 @@
 
 #include <config.h>
 
-#define STR(x) #x
-
 #if DEBUG
     #define DPRINTF(fmt, ...) \
         do {fprintf(stderr, "FILE: " __FILE__ ", LINE: %d, " fmt, __LINE__, ##__VA_ARGS__);} while(0);
@@ -15,6 +13,7 @@
 
 #define REPORT_ERROR_AND_EXIT(...) \
     do { \
+        perror(); \
         fprintf(stderr, __VA_ARGS__); \
         exit(EXIT_FAILURE); \
     } while(0);
