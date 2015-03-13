@@ -1,13 +1,17 @@
 #include "common.h"
 #include "mrcuda.h"
+#include "record.h"
+#include "comm.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <dlfcn.h>
 #include <string.h>
+#include <pthread.h>
 
 #define __RCUDA_LIBRARY_PATH_ENV_NAME__ "MRCUDA_RCUDA_LIB_PATH"
 #define __NVIDIA_LIBRARY_PATH_ENV_NAME__ "MRCUDA_NVIDIA_LIB_PATH"
+#define __SOCK_PATH_ENV_NAME__ "MRCUDA_SOCK_PATH"
 
 MRCUDASym *mrcudaSymNvidia;
 MRCUDASym *mrcudaSymRCUDA;
@@ -15,6 +19,10 @@ MRCUDASym *mrcudaSymDefault;
 
 static char *__rCUDALibPath;
 static char *__nvidiaLibPath;
+
+char *__sockPath;
+
+static pthread_mutex_t __processing_func_mutex;
 
 /**
  * Try to link the specified symbol to the handle.
@@ -208,6 +216,9 @@ void mrcuda_init()
     if(__nvidiaLibPath == NULL || strlen(__nvidiaLibPath) == 0)
         REPORT_ERROR_AND_EXIT("%s is not specified.\n", __NVIDIA_LIBRARY_PATH_ENV_NAME__);
 
+    __sockPath = getenv(__SOCK_PATH_ENV_NAME__);
+    if(__sockPath == NULL || strlen(__sockPath) == 0)
+        REPORT_ERROR_AND_EXIT("%s is not specified.\n", __SOCK_PATH_ENV_NAME__);
 
     // Allocate space for global variables.
     mrcudaSymRCUDA = malloc(sizeof(MRCUDASym));
@@ -233,6 +244,16 @@ void mrcuda_init()
     // Symlink rCUDA and CUDA functions.
     __symlink_handle(mrcudaSymRCUDA);
     __symlink_handle(mrcudaSymNvidia);
+
+    // Initialize the record/replay module.
+    mrcuda_record_init();
+
+    // Initialize mutex for switching locking.
+    pthread_mutex_init(&__processing_func_mutex, NULL);
+
+    // Start listening on the specified socket path.
+    if(mrcuda_comm_listen_for_signal(__sockPath, &mrcuda_switch) != 0)
+        REPORT_ERROR_AND_EXIT("Encounter a problem with the specified socket path.\n");
 }
 
 
@@ -257,5 +278,47 @@ int mrcuda_fini()
             dlclose(mrcudaSymNvidia->handle);
         free(mrcudaSymNvidia);
     }
+
+    mrcuda_record_fini();
+
+    if(__processing_func_mutex)
+        pthread_mutex_destroy(&__processing_func_mutex);
+}
+
+/**
+ * Switch from rCUDA to native.
+ */
+void mrcuda_switch()
+{
+    MRecord *record = NULL;
+    mrcuda_function_call_lock();
+    mrcudaSymRCUDA->mrcudaDeviceSynchronize();
+    record = mrcudaRecordHeadPtr;
+    while(record != NULL)
+    {
+        record->replayFunc(record);
+        record = record->next;
+    }
+    mrcuda_sync_mem();
+    mrcudaSymDefault = mrcudaSymNvidia;
+    mrcuda_function_call_release();
+}
+
+/**
+ * Create a barrier such that subsequent calls are blocked until the barrier is released.
+ */
+void mrcuda_function_call_lock()
+{
+    if(pthread_mutex_lock(&__processing_func_mutex) != 0)
+        REPORT_ERROR_AND_EXIT("Encounter an error during __processing_func_mutex locking process.\n");
+}
+
+/**
+ * Release the barrier; thus, allow subsequent calls to be processed normally.
+ */
+void mrcuda_function_call_release()
+{
+    if(pthread_mutex_unlock(&__processing_func_mutex) != 0)
+        REPORT_ERROR_AND_EXIT("Encounter an error during __processing_func_mutex unlocking process.\n");
 }
 

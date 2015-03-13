@@ -156,7 +156,6 @@ typedef struct MRCUDASym
     void (*__mrcudaTextureFetch)(const void* tex,void* index,int integer,void* val);
     void (*__mrcudaMutexOperation)(int lock);
     cudaError_t (*__mrcudaRegisterDeviceFunction)();
-
 } MRCUDASym;
 
 extern MRCUDASym *mrcudaSymNvidia;
