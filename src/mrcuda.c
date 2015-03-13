@@ -9,6 +9,10 @@
 #define __RCUDA_LIBRARY_PATH_ENV_NAME__ "MRCUDA_RCUDA_LIB_PATH"
 #define __NVIDIA_LIBRARY_PATH_ENV_NAME__ "MRCUDA_NVIDIA_LIB_PATH"
 
+MRCUDASym *mrcudaSymNvidia;
+MRCUDASym *mrcudaSymRCUDA;
+MRCUDASym *mrcudaSymDefault;
+
 static char *__rCUDALibPath;
 static char *__nvidiaLibPath;
 

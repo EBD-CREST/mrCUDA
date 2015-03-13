@@ -34,12 +34,6 @@ typedef struct MRecord
             size_t offset;
             enum cudaMemcpyKind kind;
         } cudaMemcpyToSymbol;
-        struct cudaMemcpy
-        {
-            void *dst;
-            size_t count;
-            enum cudaMemcpyKind kind;
-        } cudaMemcpy;
         struct cudaMemset
         {
             void *devPtr;
@@ -48,6 +42,7 @@ typedef struct MRecord
         } cudaMemset;
         struct cudaMalloc
         {
+            void *devPtr;
             size_t size;
         } cudaMalloc;
         struct cudaFree
@@ -81,6 +76,16 @@ typedef struct MRecord
 extern MRecord *mrcudaRecordHeadPtr;
 extern MRecord *mrcudaRecordTailPtr;
 
+/**
+ * Initialize the record/replay module.
+ * Exit and report error if found.
+ */
+void mrcuda_record_init();
+
+/**
+ * Finalize the record/replay module.
+ */
+void mrcuda_record_fini();
 
 /**
  * Record a cudaRegisterFatBinary call.
@@ -98,11 +103,6 @@ void mrcuda_record_cudaRegisterFunction(void **fatCubinHandle,const char *hostFu
 void mrcuda_record_cudaMemcpyToSymbol(void *symbol, size_t count, size_t offset, enum cudaMemcpyKind kind);
 
 /**
- * Record a cudaMemcpy call.
- */
-void mrcuda_record_cudaMemcpy(void *dst, size_t count, enum cudaMemcpyKind kind);
-
-/**
  * Record a cudaMemset call.
  */
 void mrcuda_record_cudaMemset(void *devPtr, int value, size_t count);
@@ -110,7 +110,7 @@ void mrcuda_record_cudaMemset(void *devPtr, int value, size_t count);
 /**
  * Record a cudaMalloc call.
  */
-void mrcuda_record_cudaMalloc(size_t size);
+void mrcuda_record_cudaMalloc(void **devPtr, size_t size);
 
 /**
  * Record a cudaFree call.
@@ -155,11 +155,6 @@ void mrcuda_replay_cudaRegisterFunction(MRecord* record);
 void mrcuda_replay_cudaMemcpyToSymbol(MRecord* record);
 
 /**
- * Replay a cudaMemcpy call.
- */
-void mrcuda_replay_cudaMemcpy(MRecord* record);
-
-/**
  * Replay a cudaMemset call.
  */
 void mrcuda_replay_cudaMemset(MRecord* record);
@@ -193,4 +188,12 @@ void mrcuda_replay_cudaSetDeviceFalgs(MRecord* record);
  * Replay a cudaStreamCreate call.
  */
 void mrcuda_replay_cudaStreamCreate(MRecord* record);
+
+/**
+ * Download the content of active memory regions to the native device.
+ * Exit and report error if an error is found.
+ */
+void mrcuda_sync_mem();
+
+
 #endif

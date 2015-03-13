@@ -159,9 +159,9 @@ typedef struct MRCUDASym
 
 } MRCUDASym;
 
-MRCUDASym *mrcudaSymNvidia;
-MRCUDASym *mrcudaSymRCUDA;
-MRCUDASym *mrcudaSymDefault;
+extern MRCUDASym *mrcudaSymNvidia;
+extern MRCUDASym *mrcudaSymRCUDA;
+extern MRCUDASym *mrcudaSymDefault;
 
 /**
  * Initialize mrCUDA.
