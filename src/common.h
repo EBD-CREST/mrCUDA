@@ -1,6 +1,8 @@
 #ifndef __MRCUDA_COMMON__HEADER__
 #define __MRCUDA_COMMON__HEADER__
 
+#include <stdio.h>
+
 #include <config.h>
 
 #if DEBUG

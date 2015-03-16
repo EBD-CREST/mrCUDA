@@ -57,6 +57,13 @@ void mrcuda_record_init()
         REPORT_ERROR_AND_EXIT("Cannot allocate memory for __active_memory_table.\n");
 }
 
+/**
+ * Finalize the record/replay module.
+ */
+void mrcuda_record_fini()
+{
+}
+
 /*******************************************
  * Below this are record functions.        *
  *******************************************/
@@ -105,6 +112,7 @@ void mrcuda_record_cudaMalloc(void **devPtr, size_t size)
 {
     MRecord *recordPtr;
 
+	DPRINTF("ENTER mrcuda_record_cudaMalloc.\n");
     __mrcuda_record_new_safe(&recordPtr);
     
     recordPtr->functionName = "cudaMalloc";
@@ -112,7 +120,10 @@ void mrcuda_record_cudaMalloc(void **devPtr, size_t size)
     recordPtr->data.cudaMalloc.size = size;
     recordPtr->replayFunc = &mrcuda_replay_cudaMalloc;
 
-    g_hash_table_insert(__active_memory_table, *devPtr, recordPtr);
+	DPRINTF("mrcuda_record_cudaMalloc before g_hash_table_insert.\n");
+    g_hash_table_insert(__active_memory_table, devPtr, recordPtr);
+
+	DPRINTF("EXIT mrcuda_record_cudaMalloc.\n");
 }
 
 /**
@@ -128,7 +139,7 @@ void mrcuda_record_cudaFree(void *devPtr)
     recordPtr->data.cudaFree.devPtr = devPtr;
     recordPtr->replayFunc = &mrcuda_replay_cudaFree;
 
-    g_hash_table_remove(__active_memory_table, devPtr);
+    g_hash_table_remove(__active_memory_table, &devPtr);
 }
 
 /*******************************************

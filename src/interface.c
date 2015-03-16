@@ -47,7 +47,6 @@ extern __host__ cudaError_t CUDARTAPI cudaMemcpy(void *dst, const void *src, siz
     cudaError_t ret;
     mrcuda_function_call_lock();
     ret = mrcudaSymDefault->mrcudaMemcpy(dst, src, count, kind);
-    mrcuda_record_cudaMemcpy(dst, count, kind);
     mrcuda_function_call_release();
     return ret;
 }
@@ -107,10 +106,12 @@ extern __host__ cudaError_t CUDARTAPI cudaSetupArgument(const void *arg, size_t 
 extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaMalloc(void **devPtr, size_t size)
 {
     cudaError_t ret;
+	DPRINTF("ENTER cudaMalloc.\n");
     mrcuda_function_call_lock();
     ret = mrcudaSymDefault->mrcudaMalloc(devPtr, size);
     mrcuda_record_cudaMalloc(devPtr, size);
     mrcuda_function_call_release();
+	DPRINTF("EXIT cudaMalloc.\n");
     return ret;
 }
 

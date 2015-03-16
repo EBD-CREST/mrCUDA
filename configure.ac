@@ -1,4 +1,4 @@
-AC_INIT([mrcuda], [0.1.0], [markthub.p.aa@m.titech.ac.jp])
+AC_INIT([mrcuda], [6.5.0], [markthub.p.aa@m.titech.ac.jp])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])
 AC_PROG_CC
