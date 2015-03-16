@@ -203,20 +203,20 @@ gboolean __sync_mem_instance(gpointer key, gpointer value, gpointer user_data)
     MRecord *record = (MRecord *)value;
 
     void *cache;
-    cache = malloc(record->size);
+    cache = malloc(record->data.cudaMalloc.size);
     if(cache == NULL)
         REPORT_ERROR_AND_EXIT("Cannot allocate the variable cache.\n");
     if(mrcudaSymRCUDA->mrcudaMemcpy(
         cache,
         devPtr,
-        record->size,
+        record->data.cudaMalloc.size,
         cudaMemcpyDeviceToHost
     ) != cudaSuccess)
         REPORT_ERROR_AND_EXIT("Cannot copy memory from rCUDA to host for caching.\n");
     if(mrcudaSymNvidia->mrcudaMemcpy(
         devPtr,
         cache,
-        record->size,
+        record->data.cudaMalloc.size,
         cudaMemcpyHostToDevice
     ) != cudaSuccess)
         REPORT_ERROR_AND_EXIT("Cannot copy memory from the host's cache to the native device.\n");

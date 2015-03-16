@@ -30,7 +30,7 @@ static __MRCUDAComm __mrcudaCommObj;
 static void __mrcuda_comm_fini()
 {
 	DPRINTF("ENTER __mrcuda_comm_fini.\n");
-	close(__mrcudaCommObj.path);
+	close(__mrcudaCommObj.fd);
 	unlink(__mrcudaCommObj.path);
 	free(__mrcudaCommObj.path);
 	DPRINTF("EXIT __mrcuda_comm_fini.\n");

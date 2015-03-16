@@ -281,8 +281,7 @@ int mrcuda_fini()
 
     mrcuda_record_fini();
 
-    if(__processing_func_mutex)
-        pthread_mutex_destroy(&__processing_func_mutex);
+	pthread_mutex_destroy(&__processing_func_mutex);
 }
 
 /**

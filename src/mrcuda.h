@@ -1,6 +1,8 @@
 #ifndef __MRCUDA__HEADER__
 #define __MRCUDA__HEADER__
 
+#include <cuda_runtime.h>
+
 /* Struct of CUDA symbolic pointers */
 typedef struct MRCUDASym
 {

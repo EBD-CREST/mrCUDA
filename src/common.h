@@ -13,7 +13,7 @@
 
 #define REPORT_ERROR_AND_EXIT(...) \
     do { \
-        perror(); \
+        perror("FATAL ERROR"); \
         fprintf(stderr, __VA_ARGS__); \
         exit(EXIT_FAILURE); \
     } while(0);

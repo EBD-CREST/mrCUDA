@@ -29,7 +29,7 @@ extern __host__ cudaError_t CUDARTAPI cudaLaunch(const void *func)
 /**
  * Interface of cudaMemcpyToSymbol.
  */
-extern __host__ cudaError_t CUDARTAPI cudaMemcpyToSymbol(const void *symbol, const void *src, size_t count, size_t offset __dv(0), enum cudaMemcpyKind kind __dv(cudaMemcpyHostToDevice))
+extern __host__ cudaError_t CUDARTAPI cudaMemcpyToSymbol(const void *symbol, const void *src, size_t count, size_t offset, enum cudaMemcpyKind kind)
 {
     cudaError_t ret;
     mrcuda_function_call_lock();
@@ -109,7 +109,7 @@ extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaMalloc(void **devPt
     cudaError_t ret;
     mrcuda_function_call_lock();
     ret = mrcudaSymDefault->mrcudaMalloc(devPtr, size);
-    mrcuda_record_cudaMalloc(size);
+    mrcuda_record_cudaMalloc(devPtr, size);
     mrcuda_function_call_release();
     return ret;
 }
@@ -130,11 +130,11 @@ extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaFree(void *devPtr)
 /**
  * Interface of cudaConfigureCall.
  */
-extern __host__ cudaError_t CUDARTAPI cudaConfigureCall(dim3 gridDim, dim3 blockDim, size_t sharedMem __dv(0), cudaStream_t stream __dv(0))
+extern __host__ cudaError_t CUDARTAPI cudaConfigureCall(dim3 gridDim, dim3 blockDim, size_t sharedMem, cudaStream_t stream)
 {
     cudaError_t ret;
     mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->cudaConfigureCall(girdDim, blockDim, sharedMem, stream);
+    ret = mrcudaSymDefault->mrcudaConfigureCall(gridDim, blockDim, sharedMem, stream);
     mrcuda_function_call_release();
     return ret;
 }
@@ -146,7 +146,7 @@ extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaGetLastError(void)
 {
     cudaError_t ret;
     mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->cudaGetLastError();
+    ret = mrcudaSymDefault->mrcudaGetLastError();
     mrcuda_function_call_release();
     return ret;
 }
@@ -154,12 +154,12 @@ extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaGetLastError(void)
 /**
  * Interface of cudaBindTexture.
  */
-extern __host__ cudaError_t CUDARTAPI cudaBindTexture(size_t *offset, const struct textureReference *texref, const void *devPtr, const struct cudaChannelFormatDesc *desc, size_t size __dv(UINT_MAX))
+extern __host__ cudaError_t CUDARTAPI cudaBindTexture(size_t *offset, const struct textureReference *texref, const void *devPtr, const struct cudaChannelFormatDesc *desc, size_t size)
 {
     cudaError_t ret;
     mrcuda_function_call_lock();
     ret = mrcudaSymDefault->mrcudaBindTexture(offset, texref, devPtr, desc, size);
-    mrcuda_record_cudaBindTexture(textref, devPtr, desc, size);
+    mrcuda_record_cudaBindTexture(texref, devPtr, desc, size);
     mrcuda_function_call_release();
     return ret;
 }
@@ -209,7 +209,7 @@ extern __host__ cudaError_t CUDARTAPI cudaMemGetInfo(size_t *free, size_t *total
 {
     cudaError_t ret;
     mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->cudaMemGetInfo(free, total);
+    ret = mrcudaSymDefault->mrcudaMemGetInfo(free, total);
     mrcuda_function_call_release();
     return ret;
 }
@@ -221,7 +221,7 @@ extern __host__ cudaError_t CUDARTAPI cudaSetDevice(int device)
 {
     cudaError_t ret;
     mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->cudaSetDevice(device);
+    ret = mrcudaSymDefault->mrcudaSetDevice(device);
     mrcuda_function_call_release();
     return ret;
 }
@@ -233,7 +233,7 @@ extern __host__ cudaError_t CUDARTAPI cudaSetDeviceFlags( unsigned int flags )
 {
     cudaError_t ret;
     mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->cudaSetDeviceFlags(flags);
+    ret = mrcudaSymDefault->mrcudaSetDeviceFlags(flags);
     mrcuda_record_cudaSetDeviceFlags(flags);
     mrcuda_function_call_release();
     return ret;
@@ -246,7 +246,7 @@ extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaGetDevice(int *devi
 {
     cudaError_t ret;
     mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->cudaGetDevice(device);
+    ret = mrcudaSymDefault->mrcudaGetDevice(device);
     mrcuda_function_call_release();
     return ret;
 }
@@ -258,7 +258,7 @@ extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaGetDeviceCount(int 
 {
     cudaError_t ret;
     mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->cudaGetDeviceCount(count);
+    ret = mrcudaSymDefault->mrcudaGetDeviceCount(count);
     mrcuda_function_call_release();
     return ret;
 }

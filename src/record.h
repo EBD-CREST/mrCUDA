@@ -17,9 +17,9 @@ typedef struct MRecord
         struct cudaRegisterFunction
         {
            void **fatCubinHandle;
-           char *hostFun;
+           const char *hostFun;
            char *deviceFun;
-           char *deviceName;
+           const char *deviceName;
            int thread_limit;
            uint3 *tid;
            uint3 *bid;
@@ -100,7 +100,7 @@ void mrcuda_record_cudaRegisterFunction(void **fatCubinHandle,const char *hostFu
 /**
  * Record a cudaMemcpyToSymbol call.
  */
-void mrcuda_record_cudaMemcpyToSymbol(void *symbol, size_t count, size_t offset, enum cudaMemcpyKind kind);
+void mrcuda_record_cudaMemcpyToSymbol(const void *symbol, size_t count, size_t offset, enum cudaMemcpyKind kind);
 
 /**
  * Record a cudaMemset call.
@@ -120,7 +120,7 @@ void mrcuda_record_cudaFree(void *devPtr);
 /**
  * Record a cudaBindTexture call.
  */
-void mrcuda_record_cudaBindTexture(struct textureReference *textref, void *devPtr, struct cudaChannelFormatDesc *desc, size_t size);
+void mrcuda_record_cudaBindTexture(const struct textureReference *textref, const void *devPtr, const struct cudaChannelFormatDesc *desc, size_t size);
 
 /**
  * Record a cudaCreateChannelDesc call.
