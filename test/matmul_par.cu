@@ -155,28 +155,39 @@ int main(int argc, char *argv[])
         printf("ERRRRR\n");
 
     /* Switch to native */
-    cudaMalloc(NULL, 0);
+    /*cudaMalloc(NULL, 0);
     printf("Switched to native.....\n");
     printf("Press enter to continue...\n");
-    getchar();
+    getchar();*/
 
-    thread_matrix<<<dim3(N / BS, L / BS),
+    /*thread_matrix<<<dim3(N / BS, L / BS),
             dim3(BS, BS)>>>(Cd, L, N);
     cudaMemcpy(Ch, Cd, sizeof(float) * L * N, cudaMemcpyDeviceToHost);
     print_matrix(Ch, L, N);
-    printf("\n");
+    printf("\n");*/
 
-    matmul<<<dim3(N / BS, L / BS),
-            dim3(BS, BS)>>>(Ad, Bd, Cd, L, M, N);
-    cudaMemcpy(Ch, Cd, sizeof(float) * L * N, cudaMemcpyDeviceToHost);
-    print_matrix(Ch, L, N);
-    printf("\n");
-    print_matrix(C_cpu, L, N);
-    printf("\n");
-    if(compare_matrix(Ch, C_cpu, L, N) >= 0)
-        printf("OK\n");
-    else
-        printf("ERRRRR\n");
+    int i;
+    for(i = 0; i < 10; i++)
+    {
+        if(i == 3)
+        {
+            cudaMalloc(NULL, 0);
+            printf("Switched to native.....\n");
+            printf("Press enter to continue...\n");
+            getchar();
+        }
+        matmul<<<dim3(N / BS, L / BS),
+                dim3(BS, BS)>>>(Ad, Bd, Cd, L, M, N);
+        cudaMemcpy(Ch, Cd, sizeof(float) * L * N, cudaMemcpyDeviceToHost);
+        print_matrix(Ch, L, N);
+        printf("\n");
+        print_matrix(C_cpu, L, N);
+        printf("\n");
+        if(compare_matrix(Ch, C_cpu, L, N) >= 0)
+            printf("OK\n");
+        else
+            printf("ERRRRR\n");
+    }
 
     free(C_cpu);
 

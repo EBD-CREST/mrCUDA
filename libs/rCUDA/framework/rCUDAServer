@@ -32,7 +32,7 @@ def main(options, args):
     framework_directory = os.path.dirname(os.path.abspath(__file__))
     rCUDAd_directory = os.path.join(framework_directory, 'rCUDAd') 
     rCUDAd_program = os.path.join(rCUDAd_directory, 'rCUDAd')
-    ld_lib_path = rCUDAd_directory + ':' + '/usr/local/cuda-5.0/lib64'
+    ld_lib_path = rCUDAd_directory + ':' + '/opt/cuda/tk5.0/lib64'
 
     program_args = [rCUDAd_program, '-p', str(options.port),]
     if options.interactive:

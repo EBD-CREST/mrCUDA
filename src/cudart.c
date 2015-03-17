@@ -55,10 +55,13 @@ typedef struct __CacheMalloc
     void *devPtr;
     size_t size;
     struct __CacheMalloc *next;
+    void *data;
 } __CacheMalloc;
 
 static __CacheMalloc *__first_cachemalloc = NULL;
 static __CacheMalloc *__last_cachemalloc = NULL;
+
+static void *__cacheFatCubin;
 
 static inline void *__safe_dlsym(void *handle, const char *symbol)
 {
@@ -80,7 +83,7 @@ void init(void)
     DPRINTF("Enter init\n");
 
     __rcuda_cudart_handle = dlopen("/home/pak/src/mrCUDA/libs/rCUDA/framework/rCUDAl/libcudart.so.5.0", RTLD_NOW | RTLD_GLOBAL);
-    __nvidia_cudart_handle = dlopen("/usr/local/cuda-5.0/lib64/libcudart.so", RTLD_NOW | RTLD_GLOBAL);
+    __nvidia_cudart_handle = dlopen("/opt/cuda/tk5.0/lib64/libcudart.so", RTLD_NOW | RTLD_GLOBAL);
     if(!__rcuda_cudart_handle)
     {
         fprintf(stderr, "%s\n", dlerror());
@@ -138,6 +141,109 @@ void fini(void)
     DPRINTF("Exit fini\n");
 }
 
+extern void mrcudaSwitchToAnotherRCUDA()
+{
+    __CacheMalloc *cachemalloc = __first_cachemalloc;
+    void *devPtr;
+    cudaError_t error;
+    void *dataCache;
+
+    DPRINTF("Enter mrcudaSwitchToAnotehrRCUDA\n");
+
+    /* Copy data from the first rCUDA */
+    while(cachemalloc != NULL)
+    {
+        cachemalloc->data = malloc(cachemalloc->size);
+        if(cachemalloc->data == NULL)
+        {
+            fprintf(stderr, "Cannot allocate cachemalloc->data.\n");
+            exit(EXIT_FAILURE);
+        }
+        error = (*__rcuda_cudaMemcpy)(cachemalloc->data, cachemalloc->devPtr, cachemalloc->size, cudaMemcpyDeviceToHost);
+        if(error != cudaSuccess)
+        {
+            fprintf(stderr, "Cannot perform __rcuda_cudaMemcpy.\n");
+            exit(EXIT_FAILURE);
+        }
+        cachemalloc = cachemalloc->next;
+    }
+
+    /* Reload rCUDA with a new environment variable */
+    printf("---- %p -----\n", __rcuda_cudart_handle);
+    dlclose(__rcuda_cudart_handle);
+    setenv("RCUDA_DEVICE_0", "rc016", 1);
+    __rcuda_cudart_handle = dlopen("/home/pak/src/mrCUDA/libs/rCUDA/framework/rCUDAl/libcudart.so.5.0", RTLD_NOW | RTLD_LOCAL);
+    printf("---- %p -----\n", __rcuda_cudart_handle);
+    if(!__rcuda_cudart_handle)
+    {
+        fprintf(stderr, "%s\n", dlerror());
+        exit(EXIT_FAILURE);
+    }
+    dlerror();  /* Clear any existing error */
+    __rcuda___cudaRegisterFatBinary = __safe_dlsym(__rcuda_cudart_handle, "__cudaRegisterFatBinary");
+    __rcuda___cudaRegisterFunction = __safe_dlsym(__rcuda_cudart_handle, "__cudaRegisterFunction");
+    __rcuda_cudaMalloc = __safe_dlsym(__rcuda_cudart_handle, "cudaMalloc");
+    __rcuda_cudaMemcpy = __safe_dlsym(__rcuda_cudart_handle, "cudaMemcpy");
+    __rcuda_cudaLaunch = __safe_dlsym(__rcuda_cudart_handle, "cudaLaunch");
+    __rcuda_cudaSetupArgument = __safe_dlsym(__rcuda_cudart_handle, "cudaSetupArgument");
+    __rcuda_cudaConfigureCall = __safe_dlsym(__rcuda_cudart_handle, "cudaConfigureCall");
+    __rcuda_cudaFree = __safe_dlsym(__rcuda_cudart_handle, "cudaFree");
+
+    /* Re-register binary */
+    __rcuda_fatCubinHandle = (*__rcuda___cudaRegisterFatBinary)(__cacheFatCubin);
+    printf("HURAYYYYYY!!!!!!!!!!!\n");
+    getchar();
+    exit(EXIT_SUCCESS);
+
+    /* Replay cudaMalloc */
+    while(cachemalloc != NULL)
+    {
+        error = (*__nvidia_cudaMalloc)(&devPtr, cachemalloc->size);
+        if(error != cudaSuccess)
+        {
+            fprintf(stderr, "Cannot replay cudaMalloc.\n");
+            exit(EXIT_FAILURE);
+        }
+        dataCache = malloc(cachemalloc->size);
+        if(dataCache == NULL)
+        {
+            fprintf(stderr, "Cannot allocate dataCache.\n");
+            exit(EXIT_FAILURE);
+        }
+        error = (*__rcuda_cudaMemcpy)(dataCache, cachemalloc->devPtr, cachemalloc->size, cudaMemcpyDeviceToHost);
+        if(error != cudaSuccess)
+        {
+            fprintf(stderr, "Cannot perform __rcuda_cudaMemcpy.\n");
+            exit(EXIT_FAILURE);
+        }
+        error = (*__nvidia_cudaMemcpy)(devPtr, dataCache, cachemalloc->size, cudaMemcpyHostToDevice);
+        if(error != cudaSuccess)
+        {
+            fprintf(stderr, "Cannot perform __nvidia_cudaMemcpy.\n");
+            exit(EXIT_FAILURE);
+        }
+        free(dataCache);
+        __first_cachemalloc = cachemalloc->next;
+        free(cachemalloc);
+        cachemalloc = __first_cachemalloc;
+    }
+    __first_cachemalloc = NULL;
+    __last_cachemalloc = NULL;
+
+    /* Change default function handler */
+    __default___cudaRegisterFatBinary = __nvidia___cudaRegisterFatBinary;
+    __default___cudaRegisterFunction = __nvidia___cudaRegisterFunction;
+    __default_cudaMalloc = __nvidia_cudaMalloc;
+    __default_cudaMemcpy = __nvidia_cudaMemcpy;
+    __default_cudaLaunch = __nvidia_cudaLaunch;
+    __default_cudaSetupArgument = __nvidia_cudaSetupArgument;
+    __default_cudaConfigureCall = __nvidia_cudaConfigureCall;
+    __default_cudaFree = __nvidia_cudaFree;
+
+    dlclose(__rcuda_cudart_handle);
+    DPRINTF("Exit mrcudaSwitchToNative\n");
+}
+
 extern void mrcudaSwitchToNative()
 {
     __CacheMalloc *cachemalloc = __first_cachemalloc;
@@ -190,6 +296,8 @@ extern void mrcudaSwitchToNative()
     __default_cudaSetupArgument = __nvidia_cudaSetupArgument;
     __default_cudaConfigureCall = __nvidia_cudaConfigureCall;
     __default_cudaFree = __nvidia_cudaFree;
+
+    dlclose(__rcuda_cudart_handle);
     DPRINTF("Exit mrcudaSwitchToNative\n");
 }
 
@@ -198,6 +306,7 @@ void **__cudaRegisterFatBinary(void *fatCubin)
     DPRINTF("Enter __cudaRegisterFatBinary\n");
     __nvidia_fatCubinHandle = (*__nvidia___cudaRegisterFatBinary)(fatCubin);
     __rcuda_fatCubinHandle = (*__rcuda___cudaRegisterFatBinary)(fatCubin);
+    __cacheFatCubin = fatCubin;
     DPRINTF("Exit __cudaRegisterFatBinary\n");
 
     return __rcuda_fatCubinHandle;
@@ -250,7 +359,7 @@ extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaMalloc(void **devPt
     __CacheMalloc *cachemalloc;
 
     if(devPtr == NULL && size == 0)
-        mrcudaSwitchToNative();
+        mrcudaSwitchToAnotherRCUDA();
     else
     {
         DPRINTF("Enter cudaMalloc\n");
