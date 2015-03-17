@@ -2,6 +2,10 @@
 #include "mrcuda.h"
 #include "record.h"
 
+#define __CUDALAUNCHCOUNTTHRESHOLD 10
+
+static int __cudaLaunchCount = 0;
+
 /**
  * Interface of cudaThreadSynchronize.
  */
@@ -20,6 +24,9 @@ extern __host__ cudaError_t CUDARTAPI cudaThreadSynchronize(void)
 extern __host__ cudaError_t CUDARTAPI cudaLaunch(const void *func)
 {
     cudaError_t ret;
+    __cudaLaunchCount++;
+    if(__CUDALAUNCHCOUNTTHRESHOLD == __cudaLaunchCount)
+        mrcuda_switch();
     mrcuda_function_call_lock();
     ret = mrcudaSymDefault->mrcudaLaunch(func);
     mrcuda_function_call_release();

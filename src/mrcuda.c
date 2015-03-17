@@ -294,6 +294,7 @@ int mrcuda_fini()
 void mrcuda_switch()
 {
     MRecord *record = NULL;
+    DPRINTF("ENTER mrcuda_switch.\n");
     mrcuda_function_call_lock();
     mrcudaSymRCUDA->mrcudaDeviceSynchronize();
     record = mrcudaRecordHeadPtr;
@@ -305,6 +306,7 @@ void mrcuda_switch()
     mrcuda_sync_mem();
     mrcudaSymDefault = mrcudaSymNvidia;
     mrcuda_function_call_release();
+    DPRINTF("EXIT mrcuda_switch.\n");
 }
 
 /**
