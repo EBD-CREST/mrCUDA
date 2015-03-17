@@ -52,7 +52,7 @@ static inline void __mrcuda_record_new_safe(MRecord **recordPtr)
  */
 void mrcuda_record_init()
 {
-    __active_memory_table = g_hash_table_new(g_int_hash, g_int_equal);
+    __active_memory_table = g_hash_table_new(g_direct_hash, g_direct_equal);
     if(__active_memory_table == NULL)
         REPORT_ERROR_AND_EXIT("Cannot allocate memory for __active_memory_table.\n");
 }
@@ -121,7 +121,7 @@ void mrcuda_record_cudaMalloc(void **devPtr, size_t size)
     recordPtr->replayFunc = &mrcuda_replay_cudaMalloc;
 
 	DPRINTF("mrcuda_record_cudaMalloc before g_hash_table_insert.\n");
-    g_hash_table_insert(__active_memory_table, devPtr, recordPtr);
+    g_hash_table_insert(__active_memory_table, *devPtr, recordPtr);
 
 	DPRINTF("EXIT mrcuda_record_cudaMalloc.\n");
 }
@@ -139,7 +139,7 @@ void mrcuda_record_cudaFree(void *devPtr)
     recordPtr->data.cudaFree.devPtr = devPtr;
     recordPtr->replayFunc = &mrcuda_replay_cudaFree;
 
-    g_hash_table_remove(__active_memory_table, &devPtr);
+    g_hash_table_remove(__active_memory_table, devPtr);
 }
 
 /*******************************************
@@ -210,7 +210,6 @@ void mrcuda_replay_cudaFree(MRecord* record)
  */
 gboolean __sync_mem_instance(gpointer key, gpointer value, gpointer user_data)
 {
-    void *devPtr = (void *)key;
     MRecord *record = (MRecord *)value;
 
     void *cache;
@@ -219,13 +218,13 @@ gboolean __sync_mem_instance(gpointer key, gpointer value, gpointer user_data)
         REPORT_ERROR_AND_EXIT("Cannot allocate the variable cache.\n");
     if(mrcudaSymRCUDA->mrcudaMemcpy(
         cache,
-        devPtr,
+        record->data.cudaMalloc.devPtr,
         record->data.cudaMalloc.size,
         cudaMemcpyDeviceToHost
     ) != cudaSuccess)
         REPORT_ERROR_AND_EXIT("Cannot copy memory from rCUDA to host for caching.\n");
     if(mrcudaSymNvidia->mrcudaMemcpy(
-        devPtr,
+        record->data.cudaMalloc.devPtr,
         cache,
         record->data.cudaMalloc.size,
         cudaMemcpyHostToDevice

@@ -25,6 +25,9 @@ static __host__ cudaError_t CUDARTAPI (*__nvidia_cudaLaunch)(const void *);
 static __host__ cudaError_t CUDARTAPI (*__nvidia_cudaSetupArgument)(const void *, size_t, size_t);
 static __host__ cudaError_t CUDARTAPI (*__nvidia_cudaConfigureCall)(dim3, dim3, size_t, cudaStream_t);
 static __host__ __cudart_builtin__ cudaError_t CUDARTAPI (*__nvidia_cudaFree)(void *);
+static cudaError_t (*__nvidia_cudaGetDevice)(int *);
+static cudaError_t (*__nvidia_cudaGetDeviceProperties)(struct cudaDeviceProp *,  int);
+static void (*__nvidia___cudaUnregisterFatBinary)(void **);
 
 /* RCUDA */
 static void ** (*__rcuda___cudaRegisterFatBinary)(void *);
@@ -35,6 +38,9 @@ static __host__ cudaError_t CUDARTAPI (*__rcuda_cudaLaunch)(const void *);
 static __host__ cudaError_t CUDARTAPI (*__rcuda_cudaSetupArgument)(const void *, size_t, size_t);
 static __host__ cudaError_t CUDARTAPI (*__rcuda_cudaConfigureCall)(dim3, dim3, size_t, cudaStream_t);
 static __host__ __cudart_builtin__ cudaError_t CUDARTAPI (*__rcuda_cudaFree)(void *);
+static cudaError_t (*__rcuda_cudaGetDevice)(int *);
+static cudaError_t (*__rcuda_cudaGetDeviceProperties)(struct cudaDeviceProp *,  int);
+static void (*__rcuda___cudaUnregisterFatBinary)(void **);
 
 /* Default */
 static void ** (*__default___cudaRegisterFatBinary)(void *);
@@ -45,6 +51,9 @@ static __host__ cudaError_t CUDARTAPI (*__default_cudaLaunch)(const void *);
 static __host__ cudaError_t CUDARTAPI (*__default_cudaSetupArgument)(const void *, size_t, size_t);
 static __host__ cudaError_t CUDARTAPI (*__default_cudaConfigureCall)(dim3, dim3, size_t, cudaStream_t);
 static __host__ __cudart_builtin__ cudaError_t CUDARTAPI (*__default_cudaFree)(void *);
+static cudaError_t (*__default_cudaGetDevice)(int *);
+static cudaError_t (*__default_cudaGetDeviceProperties)(struct cudaDeviceProp *,  int);
+static void (*__default___cudaUnregisterFatBinary)(void **);
 
 
 static void **__nvidia_fatCubinHandle;
@@ -79,8 +88,8 @@ void init(void)
 {
     DPRINTF("Enter init\n");
 
-    __rcuda_cudart_handle = dlopen("/home/pak/src/mrCUDA/libs/rCUDA/framework/rCUDAl/libcudart.so.5.0", RTLD_NOW | RTLD_GLOBAL);
-    __nvidia_cudart_handle = dlopen("/usr/local/cuda-5.0/lib64/libcudart.so", RTLD_NOW | RTLD_GLOBAL);
+    __rcuda_cudart_handle = dlopen("/home/pak/src/rCUDA/rCUDA-5.0/framework/rCUDAl/libcudart.so.6.5", RTLD_NOW | RTLD_GLOBAL);
+    __nvidia_cudart_handle = dlopen("/usr/local/cuda/lib64/libcudart.so.6.5", RTLD_NOW | RTLD_GLOBAL);
     if(!__rcuda_cudart_handle)
     {
         fprintf(stderr, "%s\n", dlerror());
@@ -101,6 +110,9 @@ void init(void)
     __nvidia_cudaSetupArgument = __safe_dlsym(__nvidia_cudart_handle, "cudaSetupArgument");
     __nvidia_cudaConfigureCall = __safe_dlsym(__nvidia_cudart_handle, "cudaConfigureCall");
     __nvidia_cudaFree = __safe_dlsym(__nvidia_cudart_handle, "cudaFree");
+    __nvidia_cudaGetDevice = __safe_dlsym(__nvidia_cudart_handle, "cudaGetDevice");
+    __nvidia_cudaGetDeviceProperties = __safe_dlsym(__nvidia_cudart_handle, "cudaGetDeviceProperties");
+    __nvidia___cudaUnregisterFatBinary = __safe_dlsym(__nvidia_cudart_handle, "__cudaUnregisterFatBinary");
 
     __rcuda___cudaRegisterFatBinary = __safe_dlsym(__rcuda_cudart_handle, "__cudaRegisterFatBinary");
     __rcuda___cudaRegisterFunction = __safe_dlsym(__rcuda_cudart_handle, "__cudaRegisterFunction");
@@ -110,6 +122,9 @@ void init(void)
     __rcuda_cudaSetupArgument = __safe_dlsym(__rcuda_cudart_handle, "cudaSetupArgument");
     __rcuda_cudaConfigureCall = __safe_dlsym(__rcuda_cudart_handle, "cudaConfigureCall");
     __rcuda_cudaFree = __safe_dlsym(__rcuda_cudart_handle, "cudaFree");
+    __rcuda_cudaGetDevice = __safe_dlsym(__rcuda_cudart_handle, "cudaGetDevice");
+    __rcuda_cudaGetDeviceProperties = __safe_dlsym(__rcuda_cudart_handle, "cudaGetDeviceProperties");
+    __rcuda___cudaUnregisterFatBinary = __safe_dlsym(__rcuda_cudart_handle, "__cudaUnregisterFatBinary");
 
     __default___cudaRegisterFatBinary = __rcuda___cudaRegisterFatBinary;
     __default___cudaRegisterFunction = __rcuda___cudaRegisterFunction;
@@ -196,8 +211,8 @@ extern void mrcudaSwitchToNative()
 void **__cudaRegisterFatBinary(void *fatCubin)
 {
     DPRINTF("Enter __cudaRegisterFatBinary\n");
-    __nvidia_fatCubinHandle = (*__nvidia___cudaRegisterFatBinary)(fatCubin);
     __rcuda_fatCubinHandle = (*__rcuda___cudaRegisterFatBinary)(fatCubin);
+    __nvidia_fatCubinHandle = (*__nvidia___cudaRegisterFatBinary)(fatCubin);
     DPRINTF("Exit __cudaRegisterFatBinary\n");
 
     return __rcuda_fatCubinHandle;
@@ -217,8 +232,8 @@ extern void CUDARTAPI __cudaRegisterFunction(
 )
 {
     DPRINTF("Enter __cudaRegisterFunction\n");
-    (*__nvidia___cudaRegisterFunction)(
-        __nvidia_fatCubinHandle,
+    (*__rcuda___cudaRegisterFunction)(
+        fatCubinHandle,
         hostFun,
         deviceFun,
         deviceName,
@@ -229,8 +244,8 @@ extern void CUDARTAPI __cudaRegisterFunction(
         gDim,
         wSize
     );
-    (*__rcuda___cudaRegisterFunction)(
-       fatCubinHandle,
+    (*__nvidia___cudaRegisterFunction)(
+        __nvidia_fatCubinHandle,
         hostFun,
         deviceFun,
         deviceName,
@@ -246,7 +261,7 @@ extern void CUDARTAPI __cudaRegisterFunction(
 
 extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaMalloc(void **devPtr, size_t size)
 {
-    cudaError_t ret = cudaSuccess;
+    /*cudaError_t ret = cudaSuccess;
     __CacheMalloc *cachemalloc;
 
     if(devPtr == NULL && size == 0)
@@ -274,6 +289,12 @@ extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaMalloc(void **devPt
         }
         DPRINTF("Exit cudaMalloc\n");
     }
+    return ret;*/
+    cudaError_t ret;
+    ret = (*__rcuda_cudaMalloc)(devPtr, size);
+    DPRINTF("RCUDA: %p\n", *devPtr);
+    ret = (*__nvidia_cudaMalloc)(devPtr, size);
+    DPRINTF("NVIDIA: %p\n", *devPtr);
     return ret;
 }
 
@@ -281,7 +302,9 @@ extern __host__ cudaError_t CUDARTAPI cudaMemcpy(void *dst, const void *src, siz
 {
     cudaError_t ret;
     DPRINTF("Enter cudaMemcpy\n");
-    ret = (*__default_cudaMemcpy)(dst, src, count, kind);
+    //ret = (*__default_cudaMemcpy)(dst, src, count, kind);
+    ret = (*__nvidia_cudaMemcpy)(dst, src, count, kind);
+    ret = (*__rcuda_cudaMemcpy)(dst, src, count, kind);
     DPRINTF("Exit cudaMemcpy\n");
     return ret;
 }
@@ -290,7 +313,9 @@ extern __host__ cudaError_t CUDARTAPI cudaLaunch(const void *func)
 {
     cudaError_t ret;
     DPRINTF("Enter cudaLaunch\n");
-    ret = (*__default_cudaLaunch)(func);
+    //ret = (*__default_cudaLaunch)(func);
+    ret = (*__nvidia_cudaLaunch)(func);
+    ret = (*__rcuda_cudaLaunch)(func);
     DPRINTF("Exit cudaLaunch\n");
     return ret;
 }
@@ -299,7 +324,9 @@ extern __host__ cudaError_t CUDARTAPI cudaSetupArgument(const void *arg, size_t 
 {
     cudaError_t ret;
     DPRINTF("Enter cudaSetupArgument\n");
-    ret = (*__default_cudaSetupArgument)(arg, size, offset);
+    //ret = (*__default_cudaSetupArgument)(arg, size, offset);
+    ret = (*__nvidia_cudaSetupArgument)(arg, size, offset);
+    ret = (*__rcuda_cudaSetupArgument)(arg, size, offset);
     DPRINTF("Exit cudaSetupArgument\n");
     return ret;
 }
@@ -308,7 +335,9 @@ extern __host__ cudaError_t CUDARTAPI cudaConfigureCall(dim3 gridDim, dim3 block
 {
     cudaError_t ret;
     DPRINTF("Enter cudaConfigureCall\n");
-    ret = (*__default_cudaConfigureCall)(gridDim, blockDim, sharedMem, stream);
+    //ret = (*__default_cudaConfigureCall)(gridDim, blockDim, sharedMem, stream);
+    ret = (*__nvidia_cudaConfigureCall)(gridDim, blockDim, sharedMem, stream);
+    ret = (*__rcuda_cudaConfigureCall)(gridDim, blockDim, sharedMem, stream);
     DPRINTF("Exit cudaConfigureCall\n");
     return ret;
 }
@@ -317,7 +346,37 @@ extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaFree(void *devPtr)
 {
     cudaError_t ret;
     DPRINTF("Enter cudaFree\n");
-    ret = (*__default_cudaFree)(devPtr);
+    //ret = (*__default_cudaFree)(devPtr);
+    ret = (*__nvidia_cudaFree)(devPtr);
+    ret = (*__rcuda_cudaFree)(devPtr);
     DPRINTF("Exit cudaFree\n");
     return ret;
 }
+
+extern cudaError_t cudaGetDevice(int *device)
+{
+    cudaError_t ret;
+    DPRINTF("Enter cudaGetDevice\n");
+    ret = (*__nvidia_cudaGetDevice)(device);
+    ret = (*__rcuda_cudaGetDevice)(device);
+    DPRINTF("Exit cudaGetDevice\n");
+    return ret;
+}
+
+extern cudaError_t cudaGetDeviceProperties(struct cudaDeviceProp *prop, int device)
+{
+    cudaError_t ret;
+    DPRINTF("Enter cudaGetDeviceProperties\n");
+    ret = (*__nvidia_cudaGetDeviceProperties)(prop, device);
+    ret = (*__rcuda_cudaGetDeviceProperties)(prop, device);
+    DPRINTF("Exit cudaGetDeviceProperties\n");
+    return ret;
+}
+
+extern void __cudaUnregisterFatBinary(void **fatCubinHandle)
+{
+    DPRINTF("Enter __cudaUnregisterFatBinary\n");
+    //(*__nvidia___cudaUnregisterFatBinary)(fatCubinHandle);
+    DPRINTF("Exit __cudaUnregisterFatBinary\n");
+}
+
