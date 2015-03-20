@@ -24,6 +24,15 @@ char *__sockPath;
 
 static pthread_mutex_t __processing_func_mutex;
 
+static enum mrcudaStateEnum
+{
+    MRCUDA_STATE_UNINITIALIZED = 0,
+    MRCUDA_STATE_RUNNING_RCUDA,
+    MRCUDA_STATE_RUNNING_NVIDIA,
+    MRCUDA_STATE_FINALIZED
+}; 
+static enum mrcudaStateEnum mrcudaState = MRCUDA_STATE_UNINITIALIZED;
+
 /**
  * Try to link the specified symbol to the handle.
  * Print error and terminate the program if an error occurs.
@@ -207,54 +216,63 @@ static void __symlink_handle(MRCUDASym *mrcudaSym)
 __attribute__((constructor))
 void mrcuda_init()
 {
-    // Get configurations from environment variables.
-    __rCUDALibPath = getenv(__RCUDA_LIBRARY_PATH_ENV_NAME__);
-    if(__rCUDALibPath == NULL || strlen(__rCUDALibPath) == 0)
-        REPORT_ERROR_AND_EXIT("%s is not specified.\n", __RCUDA_LIBRARY_PATH_ENV_NAME__);
+    if(mrcudaState == MRCUDA_STATE_UNINITIALIZED)
+    {
+        // Get configurations from environment variables.
+        __rCUDALibPath = getenv(__RCUDA_LIBRARY_PATH_ENV_NAME__);
+        if(__rCUDALibPath == NULL || strlen(__rCUDALibPath) == 0)
+            REPORT_ERROR_AND_EXIT("%s is not specified.\n", __RCUDA_LIBRARY_PATH_ENV_NAME__);
 
-    __nvidiaLibPath = getenv(__NVIDIA_LIBRARY_PATH_ENV_NAME__);
-    if(__nvidiaLibPath == NULL || strlen(__nvidiaLibPath) == 0)
-        REPORT_ERROR_AND_EXIT("%s is not specified.\n", __NVIDIA_LIBRARY_PATH_ENV_NAME__);
+        __nvidiaLibPath = getenv(__NVIDIA_LIBRARY_PATH_ENV_NAME__);
+        if(__nvidiaLibPath == NULL || strlen(__nvidiaLibPath) == 0)
+            REPORT_ERROR_AND_EXIT("%s is not specified.\n", __NVIDIA_LIBRARY_PATH_ENV_NAME__);
 
-    __sockPath = getenv(__SOCK_PATH_ENV_NAME__);
-    if(__sockPath == NULL || strlen(__sockPath) == 0)
-        REPORT_ERROR_AND_EXIT("%s is not specified.\n", __SOCK_PATH_ENV_NAME__);
+        __sockPath = getenv(__SOCK_PATH_ENV_NAME__);
+        if(__sockPath == NULL || strlen(__sockPath) == 0)
+            REPORT_ERROR_AND_EXIT("%s is not specified.\n", __SOCK_PATH_ENV_NAME__);
 
-    // Allocate space for global variables.
-    mrcudaSymRCUDA = malloc(sizeof(MRCUDASym));
-    if(mrcudaSymRCUDA == NULL)
-        REPORT_ERROR_AND_EXIT("Cannot allocate space for mrcudaSymRCUDA.\n");
+        // Allocate space for global variables.
+        mrcudaSymRCUDA = malloc(sizeof(MRCUDASym));
+        if(mrcudaSymRCUDA == NULL)
+            REPORT_ERROR_AND_EXIT("Cannot allocate space for mrcudaSymRCUDA.\n");
 
-    mrcudaSymNvidia = malloc(sizeof(MRCUDASym));
-    if(mrcudaSymNvidia == NULL)
-        REPORT_ERROR_AND_EXIT("Cannot allocate space for mrcudaSymNvidia.\n");
+        mrcudaSymNvidia = malloc(sizeof(MRCUDASym));
+        if(mrcudaSymNvidia == NULL)
+            REPORT_ERROR_AND_EXIT("Cannot allocate space for mrcudaSymNvidia.\n");
 
-    // Assign mrcudaSymDefault to mrcudaSymRCUDA.
-    mrcudaSymDefault = mrcudaSymRCUDA;
+        // Assign mrcudaSymDefault to mrcudaSymRCUDA.
+        mrcudaSymDefault = mrcudaSymRCUDA;
+        //mrcudaSymDefault = mrcudaSymNvidia;
 
 
-    // Create handles for CUDA libraries.
-    mrcudaSymRCUDA->handle = dlopen(__rCUDALibPath, RTLD_NOW | RTLD_GLOBAL);
-    if(mrcudaSymRCUDA->handle == NULL)
-        REPORT_ERROR_AND_EXIT("Cannot sym-link mrcudaSymRCUDA.\n");
+        // Create handles for CUDA libraries.
+        mrcudaSymNvidia->handle = dlopen(__nvidiaLibPath, RTLD_NOW | RTLD_GLOBAL);
+        if(mrcudaSymNvidia->handle == NULL)
+            REPORT_ERROR_AND_EXIT("Cannot sym-link mrcudaSymNvidia.\n");
 
-    mrcudaSymNvidia->handle = dlopen(__nvidiaLibPath, RTLD_NOW | RTLD_GLOBAL);
-    if(mrcudaSymNvidia->handle == NULL)
-        REPORT_ERROR_AND_EXIT("Cannot sym-link mrcudaSymNvidia.\n");
+        mrcudaSymRCUDA->handle = dlopen(__rCUDALibPath, RTLD_NOW | RTLD_GLOBAL);
+        if(mrcudaSymRCUDA->handle == NULL)
+            REPORT_ERROR_AND_EXIT("Cannot sym-link mrcudaSymRCUDA.\n");
 
-    // Symlink rCUDA and CUDA functions.
-    __symlink_handle(mrcudaSymRCUDA);
-    __symlink_handle(mrcudaSymNvidia);
 
-    // Initialize the record/replay module.
-    mrcuda_record_init();
+        // Symlink rCUDA and CUDA functions.
+        __symlink_handle(mrcudaSymRCUDA);
+        __symlink_handle(mrcudaSymNvidia);
 
-    // Initialize mutex for switching locking.
-    pthread_mutex_init(&__processing_func_mutex, NULL);
+        // Initialize the record/replay module.
+        mrcuda_record_init();
 
-    // Start listening on the specified socket path.
-    if(mrcuda_comm_listen_for_signal(__sockPath, &mrcuda_switch) != 0)
-        REPORT_ERROR_AND_EXIT("Encounter a problem with the specified socket path.\n");
+        // Initialize mutex for switching locking.
+        pthread_mutex_init(&__processing_func_mutex, NULL);
+
+        // Start listening on the specified socket path.
+        /*if(mrcuda_comm_listen_for_signal(__sockPath, &mrcuda_switch) != 0)
+            REPORT_ERROR_AND_EXIT("Encounter a problem with the specified socket path.\n");*/
+
+        mrcudaState = MRCUDA_STATE_RUNNING_RCUDA;
+        //mrcudaState = MRCUDA_STATE_RUNNING_NVIDIA;
+
+    }
 }
 
 
@@ -264,28 +282,30 @@ void mrcuda_init()
 __attribute__((destructor))
 int mrcuda_fini()
 {
-	DPRINTF("ENTER mrcuda_fini.\n");
-    // Close and free mrcudaSymRCUDA resources.
-    if(mrcudaSymRCUDA)
+    if(mrcudaState > MRCUDA_STATE_UNINITIALIZED && mrcudaState < MRCUDA_STATE_FINALIZED)
     {
-        if(mrcudaSymRCUDA->handle)
-            dlclose(mrcudaSymRCUDA->handle);
-        free(mrcudaSymRCUDA);
+        // Close and free mrcudaSymRCUDA resources.
+        if(mrcudaSymRCUDA)
+        {
+            if(mrcudaSymRCUDA->handle)
+                dlclose(mrcudaSymRCUDA->handle);
+            free(mrcudaSymRCUDA);
+        }
+
+        // Close and free mrcudaSymNvidia resources.
+        if(mrcudaSymNvidia)
+        {
+            if(mrcudaSymNvidia->handle)
+                dlclose(mrcudaSymNvidia->handle);
+            free(mrcudaSymNvidia);
+        }
+
+        mrcuda_record_fini();
+
+        pthread_mutex_destroy(&__processing_func_mutex);
+
+        mrcudaState = MRCUDA_STATE_FINALIZED;
     }
-
-    // Close and free mrcudaSymNvidia resources.
-    if(mrcudaSymNvidia)
-    {
-        if(mrcudaSymNvidia->handle)
-            dlclose(mrcudaSymNvidia->handle);
-        free(mrcudaSymNvidia);
-    }
-
-    mrcuda_record_fini();
-
-	pthread_mutex_destroy(&__processing_func_mutex);
-
-	DPRINTF("EXIT mrcuda_fini.\n");
 }
 
 /**
@@ -294,19 +314,30 @@ int mrcuda_fini()
 void mrcuda_switch()
 {
     MRecord *record = NULL;
-    DPRINTF("ENTER mrcuda_switch.\n");
-    mrcuda_function_call_lock();
-    mrcudaSymRCUDA->mrcudaDeviceSynchronize();
-    record = mrcudaRecordHeadPtr;
-    while(record != NULL)
+    int already_mock_stream = 0;
+    if(mrcudaState == MRCUDA_STATE_RUNNING_RCUDA)
     {
-        record->replayFunc(record);
-        record = record->next;
+        DPRINTF("ENTER mrcuda_switch.\n");
+        mrcuda_function_call_lock();
+        mrcudaSymRCUDA->mrcudaDeviceSynchronize();
+        record = mrcudaRecordHeadPtr;
+        while(record != NULL)
+        {
+            if(!already_mock_stream && record->functionName[0] != '_')
+            {
+                mrcuda_simulate_stream();
+                already_mock_stream = !already_mock_stream;
+            }
+            record->replayFunc(record);
+            record = record->next;
+        }
+        mrcuda_sync_mem();
+        mrcudaSymDefault = mrcudaSymNvidia;
+        mrcuda_function_call_release();
+
+        mrcudaState = MRCUDA_STATE_RUNNING_NVIDIA;
+        DPRINTF("EXIT mrcuda_switch.\n");
     }
-    mrcuda_sync_mem();
-    mrcudaSymDefault = mrcudaSymNvidia;
-    mrcuda_function_call_release();
-    DPRINTF("EXIT mrcuda_switch.\n");
 }
 
 /**
@@ -314,7 +345,7 @@ void mrcuda_switch()
  */
 void mrcuda_function_call_lock()
 {
-    if(pthread_mutex_lock(&__processing_func_mutex) != 0)
+    if(mrcudaState < MRCUDA_STATE_FINALIZED && pthread_mutex_lock(&__processing_func_mutex) != 0)
         REPORT_ERROR_AND_EXIT("Encounter an error during __processing_func_mutex locking process.\n");
 }
 
@@ -323,7 +354,7 @@ void mrcuda_function_call_lock()
  */
 void mrcuda_function_call_release()
 {
-    if(pthread_mutex_unlock(&__processing_func_mutex) != 0)
+    if(mrcudaState < MRCUDA_STATE_FINALIZED && pthread_mutex_unlock(&__processing_func_mutex) != 0)
         REPORT_ERROR_AND_EXIT("Encounter an error during __processing_func_mutex unlocking process.\n");
 }
 

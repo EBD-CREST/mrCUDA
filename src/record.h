@@ -4,6 +4,7 @@
 #include <cuda_runtime.h>
 
 #include "common.h"
+#include "mrcuda.h"
 
 typedef struct MRecord
 {
@@ -13,10 +14,11 @@ typedef struct MRecord
         struct cudaRegisterFatBinary
         {
             void *fatCubin;
+            void **fatCubinHandle;
         } cudaRegisterFatBinary;
         struct cudaRegisterFunction
         {
-           void **fatCubinHandle;
+           void ***fatCubinHandle;
            const char *hostFun;
            char *deviceFun;
            const char *deviceName;
@@ -27,19 +29,39 @@ typedef struct MRecord
            dim3 *gDim;
            int *wSize;
         } cudaRegisterFunction;
+        struct cudaRegisterVar
+        {
+            void ***fatCubinHandle;
+            char *hostVar;
+            char *deviceAddress;
+            const char *deviceName;
+            int ext;
+            int size;
+            int constant;
+            int global;
+        } cudaRegisterVar;
+        struct cudaRegisterTexture
+        {
+            void ***fatCubinHandle;
+            const struct textureReference *hostVar;
+            const void **deviceAddress;
+            const char *deviceName;
+            int dim;
+            int norm;
+            int ext;
+        } cudaRegisterTexture;
+        struct cudaUnregisterFatBinary
+        {
+            void ***fatCubinHandle;
+        } cudaUnregisterFatBinary;
         struct cudaMemcpyToSymbol
         {
-            void *symbol;
+            const void *symbol;
+            const void *src;
             size_t count;
             size_t offset;
             enum cudaMemcpyKind kind;
         } cudaMemcpyToSymbol;
-        struct cudaMemset
-        {
-            void *devPtr;
-            int value;
-            size_t count;
-        } cudaMemset;
         struct cudaMalloc
         {
             void *devPtr;
@@ -51,23 +73,16 @@ typedef struct MRecord
         } cudaFree;
         struct cudaBindTexture
         {
-            struct textureReference *textref;
-            void *devPtr;
-            struct cudaChannelFormatDesc *desc;
+            size_t offset;
+            const struct textureReference *texref;
+            const void *devPtr;
+            struct cudaChannelFormatDesc desc;
             size_t size;
         } cudaBindTexture;
-        struct cudaCreateChannelDesc
+        struct cudaStreamCreate
         {
-            int x;
-            int y;
-            int z;
-            int w;
-            enum cudaChannelFormatKind f;
-        } cudaCreateChannelDesc;
-        struct cudaSetDeviceFlags
-        {
-            unsigned int flags;
-        } cudaSetDeviceFlags;
+            cudaStream_t *pStream;
+        } cudaStreamCreate;
     } data;
     void (*replayFunc)(struct MRecord*);
     struct MRecord *next;
@@ -90,7 +105,7 @@ void mrcuda_record_fini();
 /**
  * Record a cudaRegisterFatBinary call.
  */
-void mrcuda_record_cudaRegisterFatBinary(void* fatCubin);
+void mrcuda_record_cudaRegisterFatBinary(void* fatCubin, void **fatCubinHandle);
 
 /**
  * Record a cudaRegisterFunction call.
@@ -98,14 +113,24 @@ void mrcuda_record_cudaRegisterFatBinary(void* fatCubin);
 void mrcuda_record_cudaRegisterFunction(void **fatCubinHandle,const char *hostFun,char *deviceFun,const char *deviceName,int thread_limit,uint3 *tid,uint3 *bid,dim3 *bDim,dim3 *gDim,int *wSize);
 
 /**
- * Record a cudaMemcpyToSymbol call.
+ * Record a cudaRegisterVar call.
  */
-void mrcuda_record_cudaMemcpyToSymbol(const void *symbol, size_t count, size_t offset, enum cudaMemcpyKind kind);
+void mrcuda_record_cudaRegisterVar(void **fatCubinHandle,char *hostVar,char *deviceAddress,const char *deviceName,int ext,int size,int constant,int global);
 
 /**
- * Record a cudaMemset call.
+ * Record a cudaRegisterTexture call.
  */
-void mrcuda_record_cudaMemset(void *devPtr, int value, size_t count);
+void mrcuda_record_cudaRegisterTexture(void **fatCubinHandle,const struct textureReference *hostVar,const void **deviceAddress,const char *deviceName,int dim,int norm,int ext);
+
+/**
+ * Record a cudaUnregisterFatBinary call.
+ */
+void mrcuda_record_cudaUnregisterFatBinary(void **fatCubinHandle);
+
+/**
+ * Record a cudaMemcpyToSymbol call.
+ */
+void mrcuda_record_cudaMemcpyToSymbol(const void *symbol, const void *src, size_t count, size_t offset, enum cudaMemcpyKind kind);
 
 /**
  * Record a cudaMalloc call.
@@ -120,7 +145,7 @@ void mrcuda_record_cudaFree(void *devPtr);
 /**
  * Record a cudaBindTexture call.
  */
-void mrcuda_record_cudaBindTexture(const struct textureReference *textref, const void *devPtr, const struct cudaChannelFormatDesc *desc, size_t size);
+void mrcuda_record_cudaBindTexture(size_t *offset, const struct textureReference *textref, const void *devPtr, const struct cudaChannelFormatDesc *desc, size_t size);
 
 /**
  * Record a cudaCreateChannelDesc call.
@@ -135,8 +160,13 @@ void mrcuda_record_cudaSetDeviceFlags(unsigned int flags);
 /**
  * Record a cudaStreamCreate call.
  */
-void mrcuda_record_cudaStreamCreate();
+void mrcuda_record_cudaStreamCreate(cudaStream_t *pStream);
 
+/**
+ * Record a cudaHostAlloc call.
+ * The dual function of this call is mrcuda_replay_cudaFreeHost.
+ */
+void mrcuda_record_cudaHostAlloc(void **pHost, size_t size, unsigned int flags);
 
 
 /**
@@ -150,14 +180,24 @@ void mrcuda_replay_cudaRegisterFatBinary(MRecord* record);
 void mrcuda_replay_cudaRegisterFunction(MRecord* record);
 
 /**
+ * Replay a cudaRegisterVar call.
+ */
+void mrcuda_replay_cudaRegisterVar(MRecord *record);
+
+/**
+ * Replay a cudaRegisterTexture call.
+ */
+void mrcuda_replay_cudaRegisterTexture(MRecord *record);
+
+/**
+ * Replay a cudaUnregisterFatBinary call.
+ */
+void mrcuda_replay_cudaUnregisterFatBinary(MRecord *record);
+
+/**
  * Replay a cudaMemcpyToSymbol call.
  */
 void mrcuda_replay_cudaMemcpyToSymbol(MRecord* record);
-
-/**
- * Replay a cudaMemset call.
- */
-void mrcuda_replay_cudaMemset(MRecord* record);
 
 /**
  * Replay a cudaMalloc call.
@@ -190,10 +230,24 @@ void mrcuda_replay_cudaSetDeviceFalgs(MRecord* record);
 void mrcuda_replay_cudaStreamCreate(MRecord* record);
 
 /**
+ * Replay a cudaFreeHost call.
+ * This function looks for the library used for allocating the ptr.
+ * The dual function of this call is mrcuda_record_cudaHostAlloc.
+ */
+MRCUDASym* mrcuda_replay_cudaFreeHost(void *ptr);
+
+/**
  * Download the content of active memory regions to the native device.
  * Exit and report error if an error is found.
  */
 void mrcuda_sync_mem();
+
+/**
+ * Simulate cuda streams on the native CUDA so that the number of streams are equaled to that of rCUDA.
+ */
+void mrcuda_simulate_stream();
+
+
 
 
 #endif

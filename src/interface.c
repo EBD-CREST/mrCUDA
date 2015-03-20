@@ -7,14 +7,135 @@
 static int __cudaLaunchCount = 0;
 
 /**
+ * Interface of __cudaRegisterFatBinary.
+ */
+void** __cudaRegisterFatBinary(void* fatCubin)
+{
+    void **ret;
+    mrcuda_init();
+    mrcuda_function_call_lock();
+    ret = mrcudaSymDefault->__mrcudaRegisterFatBinary(fatCubin);
+    if(mrcudaSymDefault == mrcudaSymRCUDA)
+        mrcuda_record_cudaRegisterFatBinary(fatCubin, ret);
+    mrcuda_function_call_release();
+    return ret;
+}
+
+/**
+ * Interface of __cudaRegisterFunction.
+ */
+void __cudaRegisterFunction(void **fatCubinHandle,const char *hostFun,char *deviceFun,const char *deviceName,int thread_limit,uint3 *tid,uint3 *bid,dim3 *bDim,dim3 *gDim,int *wSize)
+{
+    mrcuda_function_call_lock();
+    mrcudaSymDefault->__mrcudaRegisterFunction(
+        fatCubinHandle,
+        hostFun,
+        deviceFun,
+        deviceName,
+        thread_limit,
+        tid,
+        bid,
+        bDim,
+        gDim,
+        wSize
+    );
+    if(mrcudaSymDefault == mrcudaSymRCUDA)
+        mrcuda_record_cudaRegisterFunction(
+            fatCubinHandle,
+            hostFun,
+            deviceFun,
+            deviceName,
+            thread_limit,
+            tid,
+            bid,
+            bDim,
+            gDim,
+            wSize
+        );
+    mrcuda_function_call_release();
+}
+
+/**
+ * Interface of __cudaRegisterVar.
+ */
+void __cudaRegisterVar(void **fatCubinHandle,char *hostVar,char *deviceAddress,const char *deviceName,int ext,int size,int constant,int global)
+{
+    mrcuda_function_call_lock();
+    mrcudaSymDefault->__mrcudaRegisterVar(
+        fatCubinHandle,
+        hostVar,
+        deviceAddress,
+        deviceName,
+        ext,
+        size,
+        constant,
+        global
+    );
+    if(mrcudaSymDefault == mrcudaSymRCUDA)
+        mrcuda_record_cudaRegisterVar(
+            fatCubinHandle,
+            hostVar,
+            deviceAddress,
+            deviceName,
+            ext,
+            size,
+            constant,
+            global
+        );
+    mrcuda_function_call_release();
+}
+
+/**
+ * Interface of __cudaRegisterTexture.
+ */
+void __cudaRegisterTexture(void **fatCubinHandle,const struct textureReference *hostVar,const void **deviceAddress,const char *deviceName,int dim,int norm,int ext)
+{
+    mrcuda_function_call_lock();
+    mrcudaSymDefault->__mrcudaRegisterTexture(
+        fatCubinHandle,
+        hostVar,
+        deviceAddress,
+        deviceName,
+        dim,
+        norm,
+        ext
+    );
+    if(mrcudaSymDefault == mrcudaSymRCUDA)
+        mrcuda_record_cudaRegisterTexture(
+            fatCubinHandle,
+            hostVar,
+            deviceAddress,
+            deviceName,
+            dim,
+            norm,
+            ext
+        );
+    mrcuda_function_call_release();
+}
+
+/**
+ * Interface of __cudaUnregisterFatBinary.
+ */
+void __cudaUnregisterFatBinary(void **fatCubinHandle)
+{
+    /*mrcuda_function_call_lock();
+    mrcudaSymDefault->__mrcudaUnregisterFatBinary(
+        fatCubinHandle
+    );
+    if(mrcudaSymDefault == mrcudaSymRCUDA)
+        mrcuda_record_cudaUnregisterFatBinary(fatCubinHandle);
+    mrcuda_function_call_release();*/
+}
+
+/**
  * Interface of cudaThreadSynchronize.
  */
 extern __host__ cudaError_t CUDARTAPI cudaThreadSynchronize(void)
 {
+    // cudaThreadSynchronize eventually calls cudaDeviceSynchronize.
+    // Thus, locking cannot be done here since it will cause dead-lock.
     cudaError_t ret;
-    mrcuda_function_call_lock();
     ret = mrcudaSymDefault->mrcudaThreadSynchronize();
-    mrcuda_function_call_release();
     return ret;
 }
 
@@ -24,12 +145,12 @@ extern __host__ cudaError_t CUDARTAPI cudaThreadSynchronize(void)
 extern __host__ cudaError_t CUDARTAPI cudaLaunch(const void *func)
 {
     cudaError_t ret;
-    __cudaLaunchCount++;
-    if(__CUDALAUNCHCOUNTTHRESHOLD == __cudaLaunchCount)
-        mrcuda_switch();
     mrcuda_function_call_lock();
     ret = mrcudaSymDefault->mrcudaLaunch(func);
     mrcuda_function_call_release();
+    /*__cudaLaunchCount++;
+    if(__CUDALAUNCHCOUNTTHRESHOLD == __cudaLaunchCount)
+        mrcuda_switch();*/
     return ret;
 }
 
@@ -41,7 +162,8 @@ extern __host__ cudaError_t CUDARTAPI cudaMemcpyToSymbol(const void *symbol, con
     cudaError_t ret;
     mrcuda_function_call_lock();
     ret = mrcudaSymDefault->mrcudaMemcpyToSymbol(symbol, src, count, offset, kind);
-    mrcuda_record_cudaMemcpyToSymbol(symbol, count, offset, kind);
+    if(mrcudaSymDefault == mrcudaSymRCUDA)
+        mrcuda_record_cudaMemcpyToSymbol(symbol, src, count, offset, kind);
     mrcuda_function_call_release();
     return ret;
 }
@@ -64,8 +186,12 @@ extern __host__ cudaError_t CUDARTAPI cudaMemcpy(void *dst, const void *src, siz
 extern __host__ cudaError_t CUDARTAPI cudaHostAlloc(void **pHost, size_t size, unsigned int flags)
 {
     cudaError_t ret;
+    void *pHost1;
     mrcuda_function_call_lock();
     ret = mrcudaSymDefault->mrcudaHostAlloc(pHost, size, flags);
+    // This function has to be recorded regardless of rCUDA are being executed or not.
+    // This ensures that we calls cudaFreeHost using the right library (rCUDA or native).
+    mrcuda_record_cudaHostAlloc(pHost, size, flags);
     mrcuda_function_call_release();
     return ret;
 }
@@ -78,7 +204,6 @@ extern __host__ cudaError_t CUDARTAPI cudaMemset(void *devPtr, int value, size_t
     cudaError_t ret;
     mrcuda_function_call_lock();
     ret = mrcudaSymDefault->mrcudaMemset(devPtr, value, count);
-    mrcuda_record_cudaMemset(devPtr, value, count);
     mrcuda_function_call_release();
     return ret;
 }
@@ -90,7 +215,8 @@ extern __host__ cudaError_t CUDARTAPI cudaFreeHost(void *ptr)
 {
     cudaError_t ret;
     mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->mrcudaFreeHost(ptr);
+    // Call the right library of cudaFreeHost according to the recorded cudaHostAlloc calls.
+    mrcuda_replay_cudaFreeHost(ptr)->mrcudaFreeHost(ptr);
     mrcuda_function_call_release();
     return ret;
 }
@@ -113,12 +239,11 @@ extern __host__ cudaError_t CUDARTAPI cudaSetupArgument(const void *arg, size_t 
 extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaMalloc(void **devPtr, size_t size)
 {
     cudaError_t ret;
-	DPRINTF("ENTER cudaMalloc.\n");
     mrcuda_function_call_lock();
     ret = mrcudaSymDefault->mrcudaMalloc(devPtr, size);
-    mrcuda_record_cudaMalloc(devPtr, size);
+    if(mrcudaSymDefault == mrcudaSymRCUDA)
+        mrcuda_record_cudaMalloc(devPtr, size);
     mrcuda_function_call_release();
-	DPRINTF("EXIT cudaMalloc.\n");
     return ret;
 }
 
@@ -130,7 +255,8 @@ extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaFree(void *devPtr)
     cudaError_t ret;
     mrcuda_function_call_lock();
     ret = mrcudaSymDefault->mrcudaFree(devPtr);
-    mrcuda_record_cudaFree(devPtr);
+    if(mrcudaSymDefault == mrcudaSymRCUDA)
+        mrcuda_record_cudaFree(devPtr);
     mrcuda_function_call_release();
     return ret;
 }
@@ -167,7 +293,8 @@ extern __host__ cudaError_t CUDARTAPI cudaBindTexture(size_t *offset, const stru
     cudaError_t ret;
     mrcuda_function_call_lock();
     ret = mrcudaSymDefault->mrcudaBindTexture(offset, texref, devPtr, desc, size);
-    mrcuda_record_cudaBindTexture(texref, devPtr, desc, size);
+    if(mrcudaSymDefault == mrcudaSymRCUDA)
+        mrcuda_record_cudaBindTexture(offset, texref, devPtr, desc, size);
     mrcuda_function_call_release();
     return ret;
 }
@@ -180,7 +307,6 @@ extern __host__ struct cudaChannelFormatDesc CUDARTAPI cudaCreateChannelDesc(int
     struct cudaChannelFormatDesc ret;
     mrcuda_function_call_lock();
     ret = mrcudaSymDefault->mrcudaCreateChannelDesc(x, y, z, w, f);
-    mrcuda_record_cudaCreateChannelDesc(x, y, z, w, f);
     mrcuda_function_call_release();
     return ret;
 }
@@ -205,7 +331,9 @@ extern __host__ cudaError_t CUDARTAPI cudaStreamCreate(cudaStream_t *pStream)
     cudaError_t ret;
     mrcuda_function_call_lock();
     ret = mrcudaSymDefault->mrcudaStreamCreate(pStream);
-    mrcuda_record_cudaStreamCreate();
+    if(mrcudaSymDefault == mrcudaSymRCUDA)
+        mrcuda_record_cudaStreamCreate(pStream);
+    ret = cudaSuccess;
     mrcuda_function_call_release();
     return ret;
 }
@@ -242,7 +370,8 @@ extern __host__ cudaError_t CUDARTAPI cudaSetDeviceFlags( unsigned int flags )
     cudaError_t ret;
     mrcuda_function_call_lock();
     ret = mrcudaSymDefault->mrcudaSetDeviceFlags(flags);
-    mrcuda_record_cudaSetDeviceFlags(flags);
+    //if(mrcudaSymDefault == mrcudaSymRCUDA)
+    //    mrcuda_record_cudaSetDeviceFlags(flags);
     mrcuda_function_call_release();
     return ret;
 }
@@ -267,6 +396,15 @@ extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaGetDeviceCount(int 
     cudaError_t ret;
     mrcuda_function_call_lock();
     ret = mrcudaSymDefault->mrcudaGetDeviceCount(count);
+    mrcuda_function_call_release();
+    return ret;
+}
+
+cudaError_t cudaDeviceSynchronize(void)
+{
+    cudaError_t ret;
+    mrcuda_function_call_lock();
+    ret = mrcudaSymDefault->mrcudaDeviceSynchronize();
     mrcuda_function_call_release();
     return ret;
 }
