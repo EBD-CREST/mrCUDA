@@ -1,0 +1,118 @@
+#!/usr/bin/python
+
+import sys
+import os
+import subprocess
+from optparse import OptionParser
+
+def parse_args():
+    parser = OptionParser(usage = '%prog -s SERVER [options] -- PROGRAM')
+    parser.add_option('-t', '--network-type', dest = 'network_type',
+        choices = ['IB', 'TCP',],
+        default = 'TCP',
+        help = 'type of network for rCUDA (IB, TCP) [default = TCP].'
+    )
+    parser.add_option('-n', '--number-of-devices', type = 'int',
+        default = 1,
+        dest = 'number_of_devices',
+        help = 'number of GPU devices to be used [default = 1].'
+    )
+    parser.add_option('-s', '--server',
+        dest = 'server_address',
+        help = 'rCUDA server address.',
+    )
+    parser.add_option('-p', '--port', type = 'int',
+        default = 8308,
+        dest = 'port',
+        help = 'Port number [default = 8308].',
+    )
+    parser.add_option('-f', '--server-file',
+        dest = 'server_file',
+        help = 'rCUDA server file.'
+    )
+    parser.add_option('--rcuda-libcudart',
+        dest = 'rcuda_libcudart',
+        default = '/home/pak/src/rCUDA/rCUDA-5.0/framework/rCUDAl/libcudart.so',
+        help = 'rCUDA\'s libcudart.so path [default = \'/home/pak/src/rCUDA/rCUDA-5.0/framework/rCUDAl/libcudart.so\']'
+    )
+    parser.add_option('--nvidia-libcudart',
+        dest = 'nvidia_libcudart',
+        default = '/usr/local/cuda-6.5/lib64/libcudart.so',
+        help = 'NVIDIA\'s libcudart.so path [default = \'/usr/local/cuda-6.5/lib64/libcudart.so\']'
+    )
+    parser.add_option('--switch-threshold',
+        dest = 'switch_threshold',
+        default = 'RCUDA',
+        help = 'Switching threshold value (positive integer, RCUDA, NVIDIA) [default = RCUDA]'
+    )
+    parser.add_option('--sock-path',
+        dest = 'sock_path',
+        default = '/tmp/mrcuda.sock',
+        help = 'Switching socket path [default = /tmp/mrcuda.sock]'
+    )
+
+    options, args = parser.parse_args()
+    if not options.server_address and not options.server_file:
+        parser.error('either -s or -f option is required.')
+    elif options.server_address and options.server_file:
+        parser.error('-s and -f options cannot be used at the same time.')
+    if options.switch_threshold != 'RCUDA' and options.switch_threshold != 'NVIDIA':
+        try:
+            int(options.switch_threshold)
+        except ValueError:
+            parser.error('Only a positive integer, "RCUDA", or "NVIDIA" are allowed as a value of --switch-threshold.')
+    if len(args) == 0:
+        parser.error('Please specify PROGRAM to execute.')
+    return options, args
+
+def main(options, args):
+    framework_directory = os.path.dirname(os.path.abspath(__file__))
+    framework_lib_directory = os.path.join(framework_directory, 'lib64') 
+    ld_lib_path = framework_lib_directory
+
+    program_args = args
+
+    environment = os.environ.copy()
+    if 'LD_LIBRARY_PATH' in environment:
+        ld_lib_path = ld_lib_path + ':' + environment.get('LD_LIBRARY_PATH')
+
+    environment['LD_LIBRARY_PATH'] = ld_lib_path
+    environment['RCUDAPROTO'] = options.network_type
+    environment['RCUDA_DEVICE_COUNT'] = str(options.number_of_devices)
+    environment['MRCUDA_NVIDIA_LIB_PATH'] = options.nvidia_libcudart
+    environment['MRCUDA_RCUDA_LIB_PATH'] = options.rcuda_libcudart
+    environment['MRCUDA_SWITCH_THRESHOLD'] = options.switch_threshold
+    environment['MRCUDA_SOCK_PATH'] = options.sock_path
+
+    i = 0
+    if options.server_address:
+        while i < options.number_of_devices:
+            environment['RCUDA_DEVICE_' + str(i)] = options.server_address + '@' + str(options.port) + ':' + str(i)
+            i += 1
+    else:
+        f = open(options.server_file, 'r')
+        server_lists = f.readlines()
+        f.close()
+
+        server_lists = [s.strip() for s in server_lists if len(s.strip()) > 0]
+        if len(server_lists) == 0:
+            raise Exception('Server file does not contain any server information.')
+
+        j = 0
+        while i < options.number_of_devices:
+            environment['RCUDA_DEVICE_' + str(i)] = server_lists[j]
+            j += 1
+            if j >= len(server_lists):
+                j = 0
+            i += 1
+
+    p = subprocess.Popen(
+        program_args,
+        env = environment
+    )
+    p.wait()
+
+if __name__ == '__main__':
+    options, args = parse_args()
+    main(options, args)
+
