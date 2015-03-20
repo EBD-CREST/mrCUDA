@@ -2,9 +2,7 @@
 #include "mrcuda.h"
 #include "record.h"
 
-#define __CUDALAUNCHCOUNTTHRESHOLD 10
-
-static int __cudaLaunchCount = 0;
+static long int __cudaLaunchCount = 0;
 
 /**
  * Interface of __cudaRegisterFatBinary.
@@ -148,9 +146,12 @@ extern __host__ cudaError_t CUDARTAPI cudaLaunch(const void *func)
     mrcuda_function_call_lock();
     ret = mrcudaSymDefault->mrcudaLaunch(func);
     mrcuda_function_call_release();
-    __cudaLaunchCount++;
-    if(__CUDALAUNCHCOUNTTHRESHOLD == __cudaLaunchCount)
-        mrcuda_switch();
+    if(mrcudaState == MRCUDA_STATE_RUNNING_RCUDA)
+    {
+        __cudaLaunchCount++;
+        if(mrcudaNumLaunchSwitchThreashold == __cudaLaunchCount)
+            mrcuda_switch();
+    }
     return ret;
 }
 

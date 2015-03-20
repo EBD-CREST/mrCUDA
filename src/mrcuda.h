@@ -3,6 +3,19 @@
 
 #include <cuda_runtime.h>
 
+enum mrcudaStateEnum
+{
+    MRCUDA_STATE_UNINITIALIZED = 0,
+    MRCUDA_STATE_RUNNING_RCUDA,
+    MRCUDA_STATE_RUNNING_NVIDIA,
+    MRCUDA_STATE_FINALIZED
+}; 
+
+extern enum mrcudaStateEnum mrcudaState;
+
+// The number of cudaLaunch calls that will trig mrcuda_switch.
+extern long int mrcudaNumLaunchSwitchThreashold;
+
 /* Struct of CUDA symbolic pointers */
 typedef struct MRCUDASym
 {

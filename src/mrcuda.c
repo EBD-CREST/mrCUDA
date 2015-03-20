@@ -12,6 +12,7 @@
 #define __RCUDA_LIBRARY_PATH_ENV_NAME__ "MRCUDA_RCUDA_LIB_PATH"
 #define __NVIDIA_LIBRARY_PATH_ENV_NAME__ "MRCUDA_NVIDIA_LIB_PATH"
 #define __SOCK_PATH_ENV_NAME__ "MRCUDA_SOCK_PATH"
+#define __SWITCH_THRESHOLD_ENV_NAME__ "MRCUDA_SWITCH_THRESHOLD"
 
 MRCUDASym *mrcudaSymNvidia;
 MRCUDASym *mrcudaSymRCUDA;
@@ -24,14 +25,9 @@ char *__sockPath;
 
 static pthread_mutex_t __processing_func_mutex;
 
-static enum mrcudaStateEnum
-{
-    MRCUDA_STATE_UNINITIALIZED = 0,
-    MRCUDA_STATE_RUNNING_RCUDA,
-    MRCUDA_STATE_RUNNING_NVIDIA,
-    MRCUDA_STATE_FINALIZED
-}; 
-static enum mrcudaStateEnum mrcudaState = MRCUDA_STATE_UNINITIALIZED;
+enum mrcudaStateEnum mrcudaState = MRCUDA_STATE_UNINITIALIZED;
+
+long int mrcudaNumLaunchSwitchThreashold;
 
 /**
  * Try to link the specified symbol to the handle.
@@ -216,6 +212,8 @@ static void __symlink_handle(MRCUDASym *mrcudaSym)
 __attribute__((constructor))
 void mrcuda_init()
 {
+    char *switch_threshold;
+    char *endptr;
     if(mrcudaState == MRCUDA_STATE_UNINITIALIZED)
     {
         // Get configurations from environment variables.
@@ -231,6 +229,28 @@ void mrcuda_init()
         if(__sockPath == NULL || strlen(__sockPath) == 0)
             REPORT_ERROR_AND_EXIT("%s is not specified.\n", __SOCK_PATH_ENV_NAME__);
 
+        if((switch_threshold = getenv(__SWITCH_THRESHOLD_ENV_NAME__)) == NULL)
+            switch_threshold = "RCUDA";
+
+        if(strcmp(switch_threshold, "RCUDA") == 0)
+        {
+            mrcudaNumLaunchSwitchThreashold = -1;
+            mrcudaState = MRCUDA_STATE_RUNNING_RCUDA;
+        }
+        else if(strcmp(switch_threshold, "NVIDIA") == 0)
+        {
+            mrcudaNumLaunchSwitchThreashold = -1;
+            mrcudaState = MRCUDA_STATE_RUNNING_NVIDIA;
+        }
+        else
+        {
+            mrcudaState = MRCUDA_STATE_RUNNING_RCUDA;
+            mrcudaNumLaunchSwitchThreashold = strtol(switch_threshold, &endptr, 10);
+            if(*endptr != '\0')
+                REPORT_ERROR_AND_EXIT("%s's value is not valid.\n", __SWITCH_THRESHOLD_ENV_NAME__);
+        }
+
+
         // Allocate space for global variables.
         mrcudaSymRCUDA = malloc(sizeof(MRCUDASym));
         if(mrcudaSymRCUDA == NULL)
@@ -240,9 +260,11 @@ void mrcuda_init()
         if(mrcudaSymNvidia == NULL)
             REPORT_ERROR_AND_EXIT("Cannot allocate space for mrcudaSymNvidia.\n");
 
-        // Assign mrcudaSymDefault to mrcudaSymRCUDA.
-        mrcudaSymDefault = mrcudaSymRCUDA;
-        //mrcudaSymDefault = mrcudaSymNvidia;
+        // Assign the appropriate library to mrcudaSymDefault.
+        if(mrcudaState == MRCUDA_STATE_RUNNING_RCUDA)
+            mrcudaSymDefault = mrcudaSymRCUDA;
+        else
+            mrcudaSymDefault = mrcudaSymNvidia;
 
 
         // Create handles for CUDA libraries.
@@ -268,10 +290,6 @@ void mrcuda_init()
         // Start listening on the specified socket path.
         /*if(mrcuda_comm_listen_for_signal(__sockPath, &mrcuda_switch) != 0)
             REPORT_ERROR_AND_EXIT("Encounter a problem with the specified socket path.\n");*/
-
-        mrcudaState = MRCUDA_STATE_RUNNING_RCUDA;
-        //mrcudaState = MRCUDA_STATE_RUNNING_NVIDIA;
-
     }
 }
 
