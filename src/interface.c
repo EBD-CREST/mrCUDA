@@ -148,9 +148,9 @@ extern __host__ cudaError_t CUDARTAPI cudaLaunch(const void *func)
     mrcuda_function_call_lock();
     ret = mrcudaSymDefault->mrcudaLaunch(func);
     mrcuda_function_call_release();
-    /*__cudaLaunchCount++;
+    __cudaLaunchCount++;
     if(__CUDALAUNCHCOUNTTHRESHOLD == __cudaLaunchCount)
-        mrcuda_switch();*/
+        mrcuda_switch();
     return ret;
 }
 
@@ -370,8 +370,8 @@ extern __host__ cudaError_t CUDARTAPI cudaSetDeviceFlags( unsigned int flags )
     cudaError_t ret;
     mrcuda_function_call_lock();
     ret = mrcudaSymDefault->mrcudaSetDeviceFlags(flags);
-    //if(mrcudaSymDefault == mrcudaSymRCUDA)
-    //    mrcuda_record_cudaSetDeviceFlags(flags);
+    if(mrcudaSymDefault == mrcudaSymRCUDA)
+        mrcuda_record_cudaSetDeviceFlags(flags);
     mrcuda_function_call_release();
     return ret;
 }

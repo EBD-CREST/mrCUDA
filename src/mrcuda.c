@@ -323,7 +323,7 @@ void mrcuda_switch()
         record = mrcudaRecordHeadPtr;
         while(record != NULL)
         {
-            if(!already_mock_stream && record->functionName[0] != '_')
+            if(!already_mock_stream && record->functionName[0] != '_' && strcmp(record->functionName, "cudaSetDeviceFlags") != 0)
             {
                 mrcuda_simulate_stream();
                 already_mock_stream = !already_mock_stream;

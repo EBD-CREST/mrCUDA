@@ -288,6 +288,20 @@ void mrcuda_record_cudaHostAlloc(void **pHost, size_t size, unsigned int flags)
     g_hash_table_insert(__hostAllocTable, *pHost, mrcudaSymDefault);
 }
 
+/**
+ * Record a cudaSetDeviceFlags call.
+ */
+void mrcuda_record_cudaSetDeviceFlags(unsigned int flags)
+{
+    MRecord *recordPtr;
+
+    __mrcuda_record_new_safe(&recordPtr);
+
+    recordPtr->functionName = "cudaSetDeviceFlags";
+    recordPtr->data.cudaSetDeviceFlags.flags = flags;
+    recordPtr->replayFunc = &mrcuda_replay_cudaSetDeviceFlags;
+}
+
 /*******************************************
  * Below this are replay functions.        *
  *******************************************/
@@ -464,6 +478,16 @@ MRCUDASym* mrcuda_replay_cudaFreeHost(void *ptr)
     else
         calledLib = mrcudaSymDefault;
     return calledLib;
+}
+
+/**
+ * Replay a cudaSetDeviceFlags call.
+ */
+void mrcuda_replay_cudaSetDeviceFlags(MRecord* record)
+{
+    mrcudaSymNvidia->mrcudaSetDeviceFlags(
+        record->data.cudaSetDeviceFlags.flags
+    );
 }
 
 /*

@@ -83,6 +83,10 @@ typedef struct MRecord
         {
             cudaStream_t *pStream;
         } cudaStreamCreate;
+        struct cudaSetDeviceFlags
+        {
+            unsigned int flags;
+        } cudaSetDeviceFlags;
     } data;
     void (*replayFunc)(struct MRecord*);
     struct MRecord *next;
@@ -222,7 +226,7 @@ void mrcuda_replay_cudaCreateChannelDesc(MRecord* record);
 /**
  * Replay a cudaSetDeviceFlags call.
  */
-void mrcuda_replay_cudaSetDeviceFalgs(MRecord* record);
+void mrcuda_replay_cudaSetDeviceFlags(MRecord* record);
 
 /**
  * Replay a cudaStreamCreate call.
