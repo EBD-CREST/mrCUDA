@@ -344,13 +344,13 @@ void mrcuda_switch()
         DPRINTF("ENTER mrcuda_switch.\n");
 
         gettimeofday(&start_switching_time, NULL);
-        
         mrcuda_function_call_lock();
+        
         mrcudaSymRCUDA->mrcudaDeviceSynchronize();
         record = mrcudaRecordHeadPtr;
         while(record != NULL)
         {
-            if(!already_mock_stream && record->functionName[0] != '_' && strcmp(record->functionName, "cudaSetDeviceFlags") != 0)
+            if(!already_mock_stream && !(record->skip_mock_stream))
             {
                 mrcuda_simulate_stream();
                 already_mock_stream = !already_mock_stream;
@@ -363,9 +363,8 @@ void mrcuda_switch()
         mrcudaSymDefault = mrcudaSymNvidia;
         mrcudaState = MRCUDA_STATE_RUNNING_NVIDIA;
 
-        gettimeofday(&stop_switching_time, NULL);
-
         mrcuda_function_call_release();
+        gettimeofday(&stop_switching_time, NULL);
         DPRINTF("EXIT mrcuda_switch.\n");
 
         fprintf(stderr, "mrcuda_switch: num_replay: %d\n", num_replay);

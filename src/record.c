@@ -21,6 +21,11 @@ static GHashTable *__activeMemoryTable;
 static GHashTable *__fatCubinHandleAddrTable;
 static GHashTable *__hostAllocTable;
 
+static long int _totalSyncMemSize = 0;
+static int _totalSyncMemCalls = 0;
+static double _totalSyncTime = 0.0f;
+
+
 /**
  * Allocate a new MRecord and appropriately link the new one with the previous.
  * The pointer to the new MRecord is recorded into recordPtr.
@@ -108,6 +113,7 @@ void mrcuda_record_cudaRegisterFatBinary(void* fatCubin, void **fatCubinHandle)
     __mrcuda_record_new_safe(&recordPtr);
 
     recordPtr->functionName = "__cudaRegisterFatBinary";
+    recordPtr->skip_mock_stream = 1;
     recordPtr->data.cudaRegisterFatBinary.fatCubin = fatCubin;
     recordPtr->data.cudaRegisterFatBinary.fatCubinHandle = fatCubinHandle;
     recordPtr->replayFunc = &mrcuda_replay_cudaRegisterFatBinary;
@@ -129,6 +135,7 @@ void mrcuda_record_cudaRegisterFunction(void **fatCubinHandle,const char *hostFu
         REPORT_ERROR_AND_EXIT("Cannot find the address of the specified fatCubinHandle.\n");
 
     recordPtr->functionName = "__cudaRegisterFunction";
+    recordPtr->skip_mock_stream = 1;
     recordPtr->data.cudaRegisterFunction.fatCubinHandle = fatCubinHandleAddr;
     recordPtr->data.cudaRegisterFunction.hostFun = hostFun;
     recordPtr->data.cudaRegisterFunction.deviceFun = deviceFun;
@@ -156,6 +163,7 @@ void mrcuda_record_cudaRegisterVar(void **fatCubinHandle,char *hostVar,char *dev
         REPORT_ERROR_AND_EXIT("Cannot find the address of the specified fatCubinHandle.\n");
 
     recordPtr->functionName = "__cudaRegisterVar";
+    recordPtr->skip_mock_stream = 1;
     recordPtr->data.cudaRegisterVar.fatCubinHandle = fatCubinHandleAddr;
     recordPtr->data.cudaRegisterVar.hostVar = hostVar;
     recordPtr->data.cudaRegisterVar.deviceAddress = deviceAddress;
@@ -181,6 +189,7 @@ void mrcuda_record_cudaRegisterTexture(void **fatCubinHandle,const struct textur
         REPORT_ERROR_AND_EXIT("Cannot find the address of the specified fatCubinHandle.\n");
 
     recordPtr->functionName = "__cudaRegisterTexture";
+    recordPtr->skip_mock_stream = 1;
     recordPtr->data.cudaRegisterTexture.fatCubinHandle = fatCubinHandleAddr;
     recordPtr->data.cudaRegisterTexture.hostVar = hostVar;
     recordPtr->data.cudaRegisterTexture.deviceAddress = deviceAddress;
@@ -219,6 +228,7 @@ void mrcuda_record_cudaMalloc(void **devPtr, size_t size)
     __mrcuda_record_new_safe(&recordPtr);
     
     recordPtr->functionName = "cudaMalloc";
+    recordPtr->skip_mock_stream = 0;
     recordPtr->data.cudaMalloc.devPtr = *devPtr;
     recordPtr->data.cudaMalloc.size = size;
     recordPtr->replayFunc = &mrcuda_replay_cudaMalloc;
@@ -236,6 +246,7 @@ void mrcuda_record_cudaFree(void *devPtr)
     __mrcuda_record_new_safe(&recordPtr);
 
     recordPtr->functionName = "cudaFree";
+    recordPtr->skip_mock_stream = 0;
     recordPtr->data.cudaFree.devPtr = devPtr;
     recordPtr->replayFunc = &mrcuda_replay_cudaFree;
 
@@ -252,6 +263,7 @@ void mrcuda_record_cudaMemcpyToSymbol(const void *symbol, const void *src, size_
     __mrcuda_record_new_safe(&recordPtr);
 
     recordPtr->functionName = "cudaMemcpyToSymbol";
+    recordPtr->skip_mock_stream = 0;
     recordPtr->data.cudaMemcpyToSymbol.symbol = symbol;
     recordPtr->data.cudaMemcpyToSymbol.src = src;
     recordPtr->data.cudaMemcpyToSymbol.count = count;
@@ -270,6 +282,7 @@ void mrcuda_record_cudaBindTexture(size_t *offset, const struct textureReference
     __mrcuda_record_new_safe(&recordPtr);
 
     recordPtr->functionName = "cudaBindTexture";
+    recordPtr->skip_mock_stream = 0;
     if(offset == NULL)
         recordPtr->data.cudaBindTexture.offset = 0;
     else
@@ -291,6 +304,7 @@ void mrcuda_record_cudaStreamCreate(cudaStream_t *pStream)
     __mrcuda_record_new_safe(&recordPtr);
 
     recordPtr->functionName = "cudaStreamCreate";
+    recordPtr->skip_mock_stream = 0;
     recordPtr->data.cudaStreamCreate.pStream = pStream;
     recordPtr->replayFunc = &mrcuda_replay_cudaStreamCreate;
 }
@@ -314,6 +328,7 @@ void mrcuda_record_cudaSetDeviceFlags(unsigned int flags)
     __mrcuda_record_new_safe(&recordPtr);
 
     recordPtr->functionName = "cudaSetDeviceFlags";
+    recordPtr->skip_mock_stream = 1;
     recordPtr->data.cudaSetDeviceFlags.flags = flags;
     recordPtr->replayFunc = &mrcuda_replay_cudaSetDeviceFlags;
 }
@@ -427,10 +442,13 @@ void mrcuda_replay_cudaFree(MRecord* record)
  */
 void mrcuda_replay_cudaMemcpyToSymbol(MRecord* record)
 {
+    struct timeval start_time, stop_time;
+
     void *dst;
     cudaError_t error;
     if(record->data.cudaMemcpyToSymbol.kind != cudaMemcpyDeviceToDevice)
     {
+        gettimeofday(&start_time, NULL);
         if((dst = malloc(record->data.cudaMemcpyToSymbol.count)) == NULL)
             REPORT_ERROR_AND_EXIT("Cannot allocate memory for replaying cudaMemcpyToSymbol.\n");
         if((error = mrcudaSymRCUDA->mrcudaMemcpyFromSymbol(
@@ -449,6 +467,11 @@ void mrcuda_replay_cudaMemcpyToSymbol(MRecord* record)
             cudaMemcpyHostToDevice
         ) != cudaSuccess)
             REPORT_ERROR_AND_EXIT("Cannot copy from host to device for replaying cudaMemcpyToSymbol.\n");
+        free(dst);
+        gettimeofday(&stop_time, NULL);
+        _totalSyncTime += (stop_time.tv_sec + (double)stop_time.tv_usec / 1000000.0f) - (start_time.tv_sec + (double)start_time.tv_usec / 1000000.0f);
+        _totalSyncMemSize += record->data.cudaMemcpyToSymbol.count;
+        _totalSyncMemCalls++;
     }
     else
     {
@@ -505,9 +528,6 @@ void mrcuda_replay_cudaSetDeviceFlags(MRecord* record)
         record->data.cudaSetDeviceFlags.flags
     );
 }
-
-static long int _totalSyncMemSize = 0;
-static int _totalSyncMemCalls = 0;
 
 /*
  * This function downloads the content of an active memory region to the native device.
@@ -566,11 +586,11 @@ void mrcuda_sync_mem()
 
     gettimeofday(&stop_time, NULL);
 
+    _totalSyncTime += (stop_time.tv_sec + (double)stop_time.tv_usec / 1000000.0f) - (start_time.tv_sec + (double)start_time.tv_usec / 1000000.0f);
+
     fprintf(stderr, "mrcuda_sync_mem: size: %ld\n", _totalSyncMemSize);
     fprintf(stderr, "mrcuda_sync_mem: num_calls: %d\n", _totalSyncMemCalls);
-    fprintf(stderr, "mrcuda_sync_mem: time: %.6f\n",
-        (stop_time.tv_sec + (double)stop_time.tv_usec / 1000000.0f) - (start_time.tv_sec + (double)start_time.tv_usec / 1000000.0f)
-    );
+    fprintf(stderr, "mrcuda_sync_mem: time: %.6f\n", _totalSyncTime);
 }
 
 /**

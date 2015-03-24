@@ -9,6 +9,7 @@
 typedef struct MRecord
 {
     char *functionName;
+    int skip_mock_stream;
     union 
     {
         struct cudaRegisterFatBinary
