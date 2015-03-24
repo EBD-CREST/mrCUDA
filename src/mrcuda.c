@@ -9,6 +9,9 @@
 #include <string.h>
 #include <pthread.h>
 
+// For manual profiling
+#include <sys/time.h>
+
 #define __RCUDA_LIBRARY_PATH_ENV_NAME__ "MRCUDA_RCUDA_LIB_PATH"
 #define __NVIDIA_LIBRARY_PATH_ENV_NAME__ "MRCUDA_NVIDIA_LIB_PATH"
 #define __SOCK_PATH_ENV_NAME__ "MRCUDA_SOCK_PATH"
@@ -331,11 +334,17 @@ int mrcuda_fini()
  */
 void mrcuda_switch()
 {
+    struct timeval start_switching_time, stop_switching_time;
+    int num_replay = 0;
+
     MRecord *record = NULL;
     int already_mock_stream = 0;
     if(mrcudaState == MRCUDA_STATE_RUNNING_RCUDA)
     {
         DPRINTF("ENTER mrcuda_switch.\n");
+
+        gettimeofday(&start_switching_time, NULL);
+        
         mrcuda_function_call_lock();
         mrcudaSymRCUDA->mrcudaDeviceSynchronize();
         record = mrcudaRecordHeadPtr;
@@ -348,13 +357,21 @@ void mrcuda_switch()
             }
             record->replayFunc(record);
             record = record->next;
+            num_replay += 1;
         }
         mrcuda_sync_mem();
         mrcudaSymDefault = mrcudaSymNvidia;
-        mrcuda_function_call_release();
-
         mrcudaState = MRCUDA_STATE_RUNNING_NVIDIA;
+
+        gettimeofday(&stop_switching_time, NULL);
+
+        mrcuda_function_call_release();
         DPRINTF("EXIT mrcuda_switch.\n");
+
+        fprintf(stderr, "mrcuda_switch: num_replay: %d\n", num_replay);
+        fprintf(stderr, "mrcuda_switch: time: %.6f\n",
+            (stop_switching_time.tv_sec + (double)stop_switching_time.tv_usec / 1000000.0f) - (start_switching_time.tv_sec + (double)start_switching_time.tv_usec / 1000000.0f)
+        );
     }
 }
 

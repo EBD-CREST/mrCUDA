@@ -4,6 +4,9 @@
 #include <glib.h>
 #include <assert.h>
 
+// For manual profiling
+#include <sys/time.h>
+
 #include "record.h"
 #include "mrcuda.h"
 
@@ -503,6 +506,9 @@ void mrcuda_replay_cudaSetDeviceFlags(MRecord* record)
     );
 }
 
+static long int _totalSyncMemSize = 0;
+static int _totalSyncMemCalls = 0;
+
 /*
  * This function downloads the content of an active memory region to the native device.
  * The structure of this function is as of GHRFunc for compatibility with GHashTable.
@@ -536,6 +542,9 @@ gboolean __sync_mem_instance(gpointer key, gpointer value, gpointer user_data)
         REPORT_ERROR_AND_EXIT("Cannot copy memory from the host's cache to the native device.\n");
     free(cache);
 
+    _totalSyncMemSize += record->data.cudaMalloc.size;
+    _totalSyncMemCalls++;
+
     return TRUE;
 }
 
@@ -545,10 +554,22 @@ gboolean __sync_mem_instance(gpointer key, gpointer value, gpointer user_data)
  */
 void mrcuda_sync_mem()
 {
+    struct timeval start_time, stop_time;
+
+    gettimeofday(&start_time, NULL);
+
     g_hash_table_foreach_remove(
         __activeMemoryTable,
         &__sync_mem_instance,
         NULL
+    );
+
+    gettimeofday(&stop_time, NULL);
+
+    fprintf(stderr, "mrcuda_sync_mem: size: %ld\n", _totalSyncMemSize);
+    fprintf(stderr, "mrcuda_sync_mem: num_calls: %d\n", _totalSyncMemCalls);
+    fprintf(stderr, "mrcuda_sync_mem: time: %.6f\n",
+        (stop_time.tv_sec + (double)stop_time.tv_usec / 1000000.0f) - (start_time.tv_sec + (double)start_time.tv_usec / 1000000.0f)
     );
 }
 
