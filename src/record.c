@@ -7,6 +7,10 @@
 #include "record.h"
 #include "mrcuda.h"
 
+#define _MRCUDA_RECORD_MALLOC_CACHE_SIZE_ 100
+static int mrcudaRecordCacheCounter = -1;
+MRecord *mrcudaRecordCache = NULL;
+
 MRecord *mrcudaRecordHeadPtr = NULL;
 MRecord *mrcudaRecordTailPtr = NULL;
 
@@ -22,8 +26,10 @@ static GHashTable *__hostAllocTable;
  */
 static int __mrcuda_record_new(MRecord **recordPtr)
 {
-    if((*recordPtr = calloc(1, sizeof(MRecord))) == NULL)
+    if(!mrcudaRecordCache && (mrcudaRecordCache = calloc(_MRCUDA_RECORD_MALLOC_CACHE_SIZE_, sizeof(MRecord))) == NULL)
         goto __mrcuda_record_new_err_1;
+    mrcudaRecordCacheCounter++;
+    *recordPtr = &(mrcudaRecordCache[mrcudaRecordCacheCounter]);
 
     if(mrcudaRecordHeadPtr == NULL)
         mrcudaRecordHeadPtr = *recordPtr;
@@ -31,6 +37,13 @@ static int __mrcuda_record_new(MRecord **recordPtr)
         mrcudaRecordTailPtr->next = *recordPtr;
 
     mrcudaRecordTailPtr = *recordPtr;
+
+    if(mrcudaRecordCacheCounter >= _MRCUDA_RECORD_MALLOC_CACHE_SIZE_ - 1)
+    {
+        mrcudaRecordCacheCounter = -1;
+        mrcudaRecordCache = NULL;
+    }
+
     return 0;
 
 __mrcuda_record_new_err_1:
