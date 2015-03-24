@@ -55,14 +55,6 @@ typedef struct MRecord
         {
             void ***fatCubinHandle;
         } cudaUnregisterFatBinary;
-        struct cudaMemcpyToSymbol
-        {
-            const void *symbol;
-            const void *src;
-            size_t count;
-            size_t offset;
-            enum cudaMemcpyKind kind;
-        } cudaMemcpyToSymbol;
         struct cudaMalloc
         {
             void *devPtr;
@@ -133,11 +125,6 @@ void mrcuda_record_cudaRegisterTexture(void **fatCubinHandle,const struct textur
 void mrcuda_record_cudaUnregisterFatBinary(void **fatCubinHandle);
 
 /**
- * Record a cudaMemcpyToSymbol call.
- */
-void mrcuda_record_cudaMemcpyToSymbol(const void *symbol, const void *src, size_t count, size_t offset, enum cudaMemcpyKind kind);
-
-/**
  * Record a cudaMalloc call.
  */
 void mrcuda_record_cudaMalloc(void **devPtr, size_t size);
@@ -200,11 +187,6 @@ void mrcuda_replay_cudaRegisterTexture(MRecord *record);
 void mrcuda_replay_cudaUnregisterFatBinary(MRecord *record);
 
 /**
- * Replay a cudaMemcpyToSymbol call.
- */
-void mrcuda_replay_cudaMemcpyToSymbol(MRecord* record);
-
-/**
  * Replay a cudaMalloc call.
  */
 void mrcuda_replay_cudaMalloc(MRecord* record);
@@ -251,8 +233,5 @@ void mrcuda_sync_mem();
  * Simulate cuda streams on the native CUDA so that the number of streams are equaled to that of rCUDA.
  */
 void mrcuda_simulate_stream();
-
-
-
 
 #endif

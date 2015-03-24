@@ -18,6 +18,7 @@ MRecord *mrcudaRecordHeadPtr = NULL;
 MRecord *mrcudaRecordTailPtr = NULL;
 
 static GHashTable *__activeMemoryTable;
+static GHashTable *__activeSymbolTable;
 static GHashTable *__fatCubinHandleAddrTable;
 static GHashTable *__hostAllocTable;
 
@@ -78,6 +79,9 @@ void mrcuda_record_init()
     __activeMemoryTable = g_hash_table_new(g_direct_hash, g_direct_equal);
     if(__activeMemoryTable == NULL)
         REPORT_ERROR_AND_EXIT("Cannot allocate memory for __activeMemoryTable.\n");
+    __activeSymbolTable = g_hash_table_new(g_direct_hash, g_direct_equal);
+    if(__activeSymbolTable == NULL)
+        REPORT_ERROR_AND_EXIT("Cannot allocate memory for __activeSymbolTable.\n");
     __fatCubinHandleAddrTable = g_hash_table_new(g_direct_hash, g_direct_equal);
     if(__fatCubinHandleAddrTable == NULL)
         REPORT_ERROR_AND_EXIT("Cannot allocate memory for __fatCubinHandleAddrTable.\n");
@@ -173,6 +177,8 @@ void mrcuda_record_cudaRegisterVar(void **fatCubinHandle,char *hostVar,char *dev
     recordPtr->data.cudaRegisterVar.constant = constant;
     recordPtr->data.cudaRegisterVar.global = global;
     recordPtr->replayFunc = &mrcuda_replay_cudaRegisterVar;
+
+    g_hash_table_insert(__activeSymbolTable, hostVar, recordPtr);
 }
 
 /**
@@ -251,25 +257,6 @@ void mrcuda_record_cudaFree(void *devPtr)
     recordPtr->replayFunc = &mrcuda_replay_cudaFree;
 
     g_hash_table_remove(__activeMemoryTable, devPtr);
-}
-
-/**
- * Record a cudaMemcpyToSymbol call.
- */
-void mrcuda_record_cudaMemcpyToSymbol(const void *symbol, const void *src, size_t count, size_t offset, enum cudaMemcpyKind kind)
-{
-    MRecord *recordPtr;
-
-    __mrcuda_record_new_safe(&recordPtr);
-
-    recordPtr->functionName = "cudaMemcpyToSymbol";
-    recordPtr->skip_mock_stream = 0;
-    recordPtr->data.cudaMemcpyToSymbol.symbol = symbol;
-    recordPtr->data.cudaMemcpyToSymbol.src = src;
-    recordPtr->data.cudaMemcpyToSymbol.count = count;
-    recordPtr->data.cudaMemcpyToSymbol.offset = offset;
-    recordPtr->data.cudaMemcpyToSymbol.kind = kind;
-    recordPtr->replayFunc = &mrcuda_replay_cudaMemcpyToSymbol;
 }
 
 /**
@@ -437,47 +424,6 @@ void mrcuda_replay_cudaFree(MRecord* record)
     );
 }
 
-/**
- * Replay a cudaMemcpyToSymbol call.
- */
-void mrcuda_replay_cudaMemcpyToSymbol(MRecord* record)
-{
-    struct timeval start_time, stop_time;
-
-    void *dst;
-    cudaError_t error;
-    if(record->data.cudaMemcpyToSymbol.kind != cudaMemcpyDeviceToDevice)
-    {
-        gettimeofday(&start_time, NULL);
-        if((dst = malloc(record->data.cudaMemcpyToSymbol.count)) == NULL)
-            REPORT_ERROR_AND_EXIT("Cannot allocate memory for replaying cudaMemcpyToSymbol.\n");
-        if((error = mrcudaSymRCUDA->mrcudaMemcpyFromSymbol(
-            dst, 
-            record->data.cudaMemcpyToSymbol.symbol, 
-            record->data.cudaMemcpyToSymbol.count,
-            record->data.cudaMemcpyToSymbol.offset,
-            cudaMemcpyDeviceToHost
-        )) != cudaSuccess)
-            REPORT_ERROR_AND_EXIT("Cannot copy from device to host for replaying cudaMemcpyToSymbol.\n");
-        if(mrcudaSymNvidia->mrcudaMemcpyToSymbol(
-            record->data.cudaMemcpyToSymbol.symbol,
-            dst,
-            record->data.cudaMemcpyToSymbol.count,
-            record->data.cudaMemcpyToSymbol.offset,
-            cudaMemcpyHostToDevice
-        ) != cudaSuccess)
-            REPORT_ERROR_AND_EXIT("Cannot copy from host to device for replaying cudaMemcpyToSymbol.\n");
-        free(dst);
-        gettimeofday(&stop_time, NULL);
-        _totalSyncTime += (stop_time.tv_sec + (double)stop_time.tv_usec / 1000000.0f) - (start_time.tv_sec + (double)start_time.tv_usec / 1000000.0f);
-        _totalSyncMemSize += record->data.cudaMemcpyToSymbol.count;
-        _totalSyncMemCalls++;
-    }
-    else
-    {
-        REPORT_ERROR_AND_EXIT("Not implement exception in cudaMemcpyToSymbol replay for cudaMemcpyDeviceToDevice.\n");
-    }
-}
 
 /**
  * Replay a cudaBindTexture call.
@@ -545,24 +491,65 @@ gboolean __sync_mem_instance(gpointer key, gpointer value, gpointer user_data)
     void *cache;
     cache = malloc(record->data.cudaMalloc.size);
     if(cache == NULL)
-        REPORT_ERROR_AND_EXIT("Cannot allocate the variable cache.\n");
+        REPORT_ERROR_AND_EXIT("Cannot allocate the variable cache for __sync_mem_instance.\n");
     if(mrcudaSymRCUDA->mrcudaMemcpy(
         cache,
         record->data.cudaMalloc.devPtr,
         record->data.cudaMalloc.size,
         cudaMemcpyDeviceToHost
     ) != cudaSuccess)
-        REPORT_ERROR_AND_EXIT("Cannot copy memory from rCUDA to host for caching.\n");
+        REPORT_ERROR_AND_EXIT("Cannot copy memory from rCUDA to host for caching in __sync_mem_instance.\n");
     if(mrcudaSymNvidia->mrcudaMemcpy(
         record->data.cudaMalloc.devPtr,
         cache,
         record->data.cudaMalloc.size,
         cudaMemcpyHostToDevice
     ) != cudaSuccess)
-        REPORT_ERROR_AND_EXIT("Cannot copy memory from the host's cache to the native device.\n");
+        REPORT_ERROR_AND_EXIT("Cannot copy memory from the host's cache to the native device in __sync_mem_instance.\n");
     free(cache);
 
     _totalSyncMemSize += record->data.cudaMalloc.size;
+    _totalSyncMemCalls++;
+
+    return TRUE;
+}
+
+/*
+ * This function downloads the content of an active symbol to the native device.
+ * The structure of this function is as of GHRFunc for compatibility with GHashTable.
+ * @param key is a void *devPtr.
+ * @param value is the MRecord *record associated with the key.
+ * @param user_data is always NULL.
+ * @return TRUE always.
+ * @exception exit and report the error.
+ */
+gboolean __sync_symbol_instance(gpointer key, gpointer value, gpointer user_data)
+{
+    MRecord *record = (MRecord *)value;
+    void *dst;
+    cudaError_t error;
+
+    if((dst = malloc(record->data.cudaRegisterVar.size)) == NULL)
+        REPORT_ERROR_AND_EXIT("Cannot allocate the variable cache for __sync_symbol_instance.\n");
+    if((error = mrcudaSymRCUDA->mrcudaMemcpyFromSymbol(
+        dst, 
+        record->data.cudaRegisterVar.hostVar, 
+        record->data.cudaRegisterVar.size,
+        0,
+        cudaMemcpyDeviceToHost
+    )) != cudaSuccess)
+        REPORT_ERROR_AND_EXIT("Cannot copy from rCUDA to host for caching in __sync_symbol_instance.\n");
+    if(mrcudaSymNvidia->mrcudaMemcpyToSymbol(
+        record->data.cudaRegisterVar.hostVar,
+        dst,
+        record->data.cudaRegisterVar.size,
+        0,
+        cudaMemcpyHostToDevice
+    ) != cudaSuccess)
+        REPORT_ERROR_AND_EXIT("Cannot copy memory from the host's cache to the native device in __sync_symbol_instance.\n");
+    free(dst);
+
+    _totalSyncMemSize += record->data.cudaRegisterVar.size;
     _totalSyncMemCalls++;
 
     return TRUE;
@@ -581,6 +568,12 @@ void mrcuda_sync_mem()
     g_hash_table_foreach_remove(
         __activeMemoryTable,
         &__sync_mem_instance,
+        NULL
+    );
+
+    g_hash_table_foreach_remove(
+        __activeSymbolTable,
+        &__sync_symbol_instance,
         NULL
     );
 

@@ -163,8 +163,6 @@ extern __host__ cudaError_t CUDARTAPI cudaMemcpyToSymbol(const void *symbol, con
     cudaError_t ret;
     mrcuda_function_call_lock();
     ret = mrcudaSymDefault->mrcudaMemcpyToSymbol(symbol, src, count, offset, kind);
-    if(mrcudaSymDefault == mrcudaSymRCUDA)
-        mrcuda_record_cudaMemcpyToSymbol(symbol, src, count, offset, kind);
     mrcuda_function_call_release();
     return ret;
 }
