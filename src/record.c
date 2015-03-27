@@ -25,6 +25,7 @@ static GHashTable *__hostAllocTable;
 static long int _totalSyncMemSize = 0;
 static int _totalSyncMemCalls = 0;
 static double _totalSyncTime = 0.0f;
+static double _totalRecordTime = 0.0f;
 
 
 /**
@@ -95,6 +96,7 @@ void mrcuda_record_init()
  */
 void mrcuda_record_fini()
 {
+    fprintf(stderr, "mrcuda_record: time: %.6f\n", _totalRecordTime);
     if(__activeMemoryTable)
         g_hash_table_destroy(__activeMemoryTable);
     if(__fatCubinHandleAddrTable)
@@ -114,6 +116,10 @@ void mrcuda_record_cudaRegisterFatBinary(void* fatCubin, void **fatCubinHandle)
 {
     MRecord *recordPtr;
 
+    struct timeval start_time, stop_time;
+
+    gettimeofday(&start_time, NULL);
+
     __mrcuda_record_new_safe(&recordPtr);
 
     recordPtr->functionName = "__cudaRegisterFatBinary";
@@ -123,6 +129,10 @@ void mrcuda_record_cudaRegisterFatBinary(void* fatCubin, void **fatCubinHandle)
     recordPtr->replayFunc = &mrcuda_replay_cudaRegisterFatBinary;
 
     g_hash_table_insert(__fatCubinHandleAddrTable, fatCubinHandle, &(recordPtr->data.cudaRegisterFatBinary.fatCubinHandle));
+
+    gettimeofday(&stop_time, NULL);
+
+    _totalRecordTime += (stop_time.tv_sec + (double)stop_time.tv_usec / 1000000.0f) - (start_time.tv_sec + (double)start_time.tv_usec / 1000000.0f);
 }
 
 /**
@@ -132,6 +142,9 @@ void mrcuda_record_cudaRegisterFunction(void **fatCubinHandle,const char *hostFu
 {
     MRecord *recordPtr;
     void ***fatCubinHandleAddr;
+    struct timeval start_time, stop_time;
+
+    gettimeofday(&start_time, NULL);
 
     __mrcuda_record_new_safe(&recordPtr);
 
@@ -151,6 +164,10 @@ void mrcuda_record_cudaRegisterFunction(void **fatCubinHandle,const char *hostFu
     recordPtr->data.cudaRegisterFunction.gDim = gDim;
     recordPtr->data.cudaRegisterFunction.wSize = wSize;
     recordPtr->replayFunc = &mrcuda_replay_cudaRegisterFunction;
+    
+    gettimeofday(&stop_time, NULL);
+
+    _totalRecordTime += (stop_time.tv_sec + (double)stop_time.tv_usec / 1000000.0f) - (start_time.tv_sec + (double)start_time.tv_usec / 1000000.0f);
 }
 
 /**
@@ -160,6 +177,9 @@ void mrcuda_record_cudaRegisterVar(void **fatCubinHandle,char *hostVar,char *dev
 {
     MRecord *recordPtr;
     void ***fatCubinHandleAddr;
+    struct timeval start_time, stop_time;
+
+    gettimeofday(&start_time, NULL);
     
     __mrcuda_record_new_safe(&recordPtr);
 
@@ -179,6 +199,10 @@ void mrcuda_record_cudaRegisterVar(void **fatCubinHandle,char *hostVar,char *dev
     recordPtr->replayFunc = &mrcuda_replay_cudaRegisterVar;
 
     g_hash_table_insert(__activeSymbolTable, hostVar, recordPtr);
+
+    gettimeofday(&stop_time, NULL);
+
+    _totalRecordTime += (stop_time.tv_sec + (double)stop_time.tv_usec / 1000000.0f) - (start_time.tv_sec + (double)start_time.tv_usec / 1000000.0f);
 }
 
 /**
@@ -188,6 +212,9 @@ void mrcuda_record_cudaRegisterTexture(void **fatCubinHandle,const struct textur
 {
     MRecord *recordPtr;
     void ***fatCubinHandleAddr;
+    struct timeval start_time, stop_time;
+
+    gettimeofday(&start_time, NULL);
     
     __mrcuda_record_new_safe(&recordPtr);
 
@@ -204,6 +231,9 @@ void mrcuda_record_cudaRegisterTexture(void **fatCubinHandle,const struct textur
     recordPtr->data.cudaRegisterTexture.norm = norm;
     recordPtr->data.cudaRegisterTexture.ext = ext;
     recordPtr->replayFunc = &mrcuda_replay_cudaRegisterTexture;
+    gettimeofday(&stop_time, NULL);
+
+    _totalRecordTime += (stop_time.tv_sec + (double)stop_time.tv_usec / 1000000.0f) - (start_time.tv_sec + (double)start_time.tv_usec / 1000000.0f);
 }
 
 /**
@@ -230,6 +260,9 @@ void mrcuda_record_cudaUnregisterFatBinary(void **fatCubinHandle)
 void mrcuda_record_cudaMalloc(void **devPtr, size_t size)
 {
     MRecord *recordPtr;
+    struct timeval start_time, stop_time;
+
+    gettimeofday(&start_time, NULL);
 
     __mrcuda_record_new_safe(&recordPtr);
     
@@ -240,6 +273,9 @@ void mrcuda_record_cudaMalloc(void **devPtr, size_t size)
     recordPtr->replayFunc = &mrcuda_replay_cudaMalloc;
 
     g_hash_table_insert(__activeMemoryTable, *devPtr, recordPtr);
+    gettimeofday(&stop_time, NULL);
+
+    _totalRecordTime += (stop_time.tv_sec + (double)stop_time.tv_usec / 1000000.0f) - (start_time.tv_sec + (double)start_time.tv_usec / 1000000.0f);
 }
 
 /**
@@ -248,6 +284,9 @@ void mrcuda_record_cudaMalloc(void **devPtr, size_t size)
 void mrcuda_record_cudaFree(void *devPtr)
 {
     MRecord *recordPtr;
+    struct timeval start_time, stop_time;
+
+    gettimeofday(&start_time, NULL);
 
     __mrcuda_record_new_safe(&recordPtr);
 
@@ -257,6 +296,9 @@ void mrcuda_record_cudaFree(void *devPtr)
     recordPtr->replayFunc = &mrcuda_replay_cudaFree;
 
     g_hash_table_remove(__activeMemoryTable, devPtr);
+    gettimeofday(&stop_time, NULL);
+
+    _totalRecordTime += (stop_time.tv_sec + (double)stop_time.tv_usec / 1000000.0f) - (start_time.tv_sec + (double)start_time.tv_usec / 1000000.0f);
 }
 
 /**
@@ -265,6 +307,9 @@ void mrcuda_record_cudaFree(void *devPtr)
 void mrcuda_record_cudaBindTexture(size_t *offset, const struct textureReference *texref, const void *devPtr, const struct cudaChannelFormatDesc *desc, size_t size)
 {
     MRecord *recordPtr;
+    struct timeval start_time, stop_time;
+
+    gettimeofday(&start_time, NULL);
 
     __mrcuda_record_new_safe(&recordPtr);
 
@@ -279,6 +324,9 @@ void mrcuda_record_cudaBindTexture(size_t *offset, const struct textureReference
     memcpy(&(recordPtr->data.cudaBindTexture.desc), desc, sizeof(struct cudaChannelFormatDesc));
     recordPtr->data.cudaBindTexture.size = size;
     recordPtr->replayFunc = &mrcuda_replay_cudaBindTexture;
+    gettimeofday(&stop_time, NULL);
+
+    _totalRecordTime += (stop_time.tv_sec + (double)stop_time.tv_usec / 1000000.0f) - (start_time.tv_sec + (double)start_time.tv_usec / 1000000.0f);
 }
 
 /**
@@ -287,6 +335,9 @@ void mrcuda_record_cudaBindTexture(size_t *offset, const struct textureReference
 void mrcuda_record_cudaStreamCreate(cudaStream_t *pStream)
 {
     MRecord *recordPtr;
+    struct timeval start_time, stop_time;
+
+    gettimeofday(&start_time, NULL);
 
     __mrcuda_record_new_safe(&recordPtr);
 
@@ -294,6 +345,9 @@ void mrcuda_record_cudaStreamCreate(cudaStream_t *pStream)
     recordPtr->skip_mock_stream = 0;
     recordPtr->data.cudaStreamCreate.pStream = pStream;
     recordPtr->replayFunc = &mrcuda_replay_cudaStreamCreate;
+    gettimeofday(&stop_time, NULL);
+
+    _totalRecordTime += (stop_time.tv_sec + (double)stop_time.tv_usec / 1000000.0f) - (start_time.tv_sec + (double)start_time.tv_usec / 1000000.0f);
 }
 
 /**
@@ -302,7 +356,13 @@ void mrcuda_record_cudaStreamCreate(cudaStream_t *pStream)
  */
 void mrcuda_record_cudaHostAlloc(void **pHost, size_t size, unsigned int flags)
 {
+    struct timeval start_time, stop_time;
+
+    gettimeofday(&start_time, NULL);
     g_hash_table_insert(__hostAllocTable, *pHost, mrcudaSymDefault);
+    gettimeofday(&stop_time, NULL);
+
+    _totalRecordTime += (stop_time.tv_sec + (double)stop_time.tv_usec / 1000000.0f) - (start_time.tv_sec + (double)start_time.tv_usec / 1000000.0f);
 }
 
 /**
@@ -311,6 +371,9 @@ void mrcuda_record_cudaHostAlloc(void **pHost, size_t size, unsigned int flags)
 void mrcuda_record_cudaSetDeviceFlags(unsigned int flags)
 {
     MRecord *recordPtr;
+    struct timeval start_time, stop_time;
+
+    gettimeofday(&start_time, NULL);
 
     __mrcuda_record_new_safe(&recordPtr);
 
@@ -318,6 +381,9 @@ void mrcuda_record_cudaSetDeviceFlags(unsigned int flags)
     recordPtr->skip_mock_stream = 1;
     recordPtr->data.cudaSetDeviceFlags.flags = flags;
     recordPtr->replayFunc = &mrcuda_replay_cudaSetDeviceFlags;
+    gettimeofday(&stop_time, NULL);
+
+    _totalRecordTime += (stop_time.tv_sec + (double)stop_time.tv_usec / 1000000.0f) - (start_time.tv_sec + (double)start_time.tv_usec / 1000000.0f);
 }
 
 /*******************************************
