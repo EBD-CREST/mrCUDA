@@ -27,6 +27,8 @@ static int _totalSyncMemCalls = 0;
 static double _totalSyncTime = 0.0f;
 static double _totalRecordTime = 0.0f;
 
+unsigned long int __cudaMemcpySizeTotal = 0;
+unsigned long int __cudaMemcpyToSymbolSizeTotal = 0;
 
 /**
  * Allocate a new MRecord and appropriately link the new one with the previous.
@@ -97,6 +99,8 @@ void mrcuda_record_init()
 void mrcuda_record_fini()
 {
     fprintf(stderr, "mrcuda_record: time: %.6f\n", _totalRecordTime);
+    fprintf(stderr, "mrcuda_cudaMemcpy: size: %lu\n", __cudaMemcpySizeTotal);
+    fprintf(stderr, "mrcuda_cudaMemcpyToSymbol: size: %lu\n", __cudaMemcpyToSymbolSizeTotal);
     if(__activeMemoryTable)
         g_hash_table_destroy(__activeMemoryTable);
     if(__fatCubinHandleAddrTable)

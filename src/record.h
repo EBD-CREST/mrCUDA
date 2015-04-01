@@ -88,6 +88,9 @@ typedef struct MRecord
 extern MRecord *mrcudaRecordHeadPtr;
 extern MRecord *mrcudaRecordTailPtr;
 
+extern unsigned long int __cudaMemcpySizeTotal;
+extern unsigned long int __cudaMemcpyToSymbolSizeTotal;
+
 /**
  * Initialize the record/replay module.
  * Exit and report error if found.

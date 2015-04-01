@@ -3,8 +3,6 @@
 #include "record.h"
 
 static long int __cudaLaunchCount = 0;
-static unsigned long int __cudaMemcpySizeTotal = 0;
-static unsigned long int __cudaMemcpyToSymbolSizeTotal = 0;
 
 /**
  * Interface of __cudaRegisterFatBinary.
@@ -118,8 +116,6 @@ void __cudaRegisterTexture(void **fatCubinHandle,const struct textureReference *
  */
 void __cudaUnregisterFatBinary(void **fatCubinHandle)
 {
-    fprintf(stderr, "mrcuda_cudaMemcpy: size: %lu\n", __cudaMemcpySizeTotal);
-    fprintf(stderr, "mrcuda_cudaMemcpyToSymbol: size: %lu\n", __cudaMemcpyToSymbolSizeTotal);
     /*mrcuda_function_call_lock();
     mrcudaSymDefault->__mrcudaUnregisterFatBinary(
         fatCubinHandle
