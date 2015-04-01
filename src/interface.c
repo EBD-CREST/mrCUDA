@@ -3,6 +3,8 @@
 #include "record.h"
 
 static long int __cudaLaunchCount = 0;
+static unsigned long int __cudaMemcpySizeTotal = 0;
+static unsigned long int __cudaMemcpyToSymbolSizeTotal = 0;
 
 /**
  * Interface of __cudaRegisterFatBinary.
@@ -116,6 +118,8 @@ void __cudaRegisterTexture(void **fatCubinHandle,const struct textureReference *
  */
 void __cudaUnregisterFatBinary(void **fatCubinHandle)
 {
+    fprintf(stderr, "mrcuda_cudaMemcpy: size: %lu\n", __cudaMemcpySizeTotal);
+    fprintf(stderr, "mrcuda_cudaMemcpyToSymbol: size: %lu\n", __cudaMemcpyToSymbolSizeTotal);
     /*mrcuda_function_call_lock();
     mrcudaSymDefault->__mrcudaUnregisterFatBinary(
         fatCubinHandle
@@ -163,6 +167,7 @@ extern __host__ cudaError_t CUDARTAPI cudaMemcpyToSymbol(const void *symbol, con
     cudaError_t ret;
     mrcuda_function_call_lock();
     ret = mrcudaSymDefault->mrcudaMemcpyToSymbol(symbol, src, count, offset, kind);
+    __cudaMemcpyToSymbolSizeTotal += count;
     mrcuda_function_call_release();
     return ret;
 }
@@ -175,6 +180,7 @@ extern __host__ cudaError_t CUDARTAPI cudaMemcpy(void *dst, const void *src, siz
     cudaError_t ret;
     mrcuda_function_call_lock();
     ret = mrcudaSymDefault->mrcudaMemcpy(dst, src, count, kind);
+    __cudaMemcpySizeTotal += count;
     mrcuda_function_call_release();
     return ret;
 }
