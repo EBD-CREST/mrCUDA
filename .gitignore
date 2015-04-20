@@ -1,4 +1,12 @@
 *.o
 *.swp
+*.swo
 src/libcudart.so.5.0
-test/hello
+lib64/*
+build/*
+build-aux/*
+Makefile.in
+aclocal.m4
+autom4te.cache
+configure
+config.h.in*

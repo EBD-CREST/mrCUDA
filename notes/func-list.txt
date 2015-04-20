@@ -1,0 +1,28 @@
+extern __host__ cudaError_t CUDARTAPI cudaThreadSynchronize(void);
+extern __host__ cudaError_t CUDARTAPI cudaLaunch(const void *func);
+extern __host__ cudaError_t CUDARTAPI cudaMemcpyToSymbol(const void *symbol, const void *src, size_t count, size_t offset __dv(0), enum cudaMemcpyKind kind __dv(cudaMemcpyHostToDevice));
+extern __host__ cudaError_t CUDARTAPI cudaMemcpy(void *dst, const void *src, size_t count, enum cudaMemcpyKind kind);
+extern __host__ cudaError_t CUDARTAPI cudaHostAlloc(void **pHost, size_t size, unsigned int flags);
+extern __host__ cudaError_t CUDARTAPI cudaMemset(void *devPtr, int value, size_t count);
+extern __host__ cudaError_t CUDARTAPI cudaFreeHost(void *ptr);
+extern __host__ cudaError_t CUDARTAPI cudaSetupArgument(const void *arg, size_t size, size_t offset);
+extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaMalloc(void **devPtr, size_t size);
+extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaFree(void *devPtr);
+extern __host__ cudaError_t CUDARTAPI cudaConfigureCall(dim3 gridDim, dim3 blockDim, size_t sharedMem __dv(0), cudaStream_t stream __dv(0));
+extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaGetLastError(void);
+extern __host__ cudaError_t CUDARTAPI cudaBindTexture(size_t *offset, const struct textureReference *texref, const void *devPtr, const struct cudaChannelFormatDesc *desc, size_t size __dv(UINT_MAX));
+extern __host__ struct cudaChannelFormatDesc CUDARTAPI cudaCreateChannelDesc(int x, int y, int z, int w, enum cudaChannelFormatKind f);
+extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaGetDeviceProperties(struct cudaDeviceProp *prop, int device);
+extern __host__ cudaError_t CUDARTAPI cudaStreamCreate(cudaStream_t *pStream);
+extern __host__ cudaError_t CUDARTAPI cudaMemGetInfo(size_t *free, size_t *total);
+extern __host__ cudaError_t CUDARTAPI cudaSetDevice(int device);
+extern __host__ cudaError_t CUDARTAPI cudaSetDeviceFlags( unsigned int flags );
+extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaGetDevice(int *device);
+extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaGetDeviceCount(int *count);
+
+/* Maybe we don't need these, hopefully */
+CUresult CUDAAPI cuDeviceGetAttribute(int *pi, CUdevice_attribute attrib, CUdevice dev);
+CUresult CUDAAPI cuDeviceTotalMem(size_t *bytes, CUdevice dev);
+CUresult CUDAAPI cuDeviceGetName(char *name, int len, CUdevice dev);
+CUresult CUDAAPI cuDeviceGetCount(int *count);
+CUresult CUDAAPI cuDeviceGet(CUdevice *device, int ordinal);

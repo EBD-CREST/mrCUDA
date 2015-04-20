@@ -1,8 +1,0 @@
-Package contents:
-  - ChangeLog.txt: log of changes.
-  - contents.txt: this file.
-  - doc: folder containing the rCUDA user guide.
-  - framework: rCUDA server and library.
-  - framework/common: common library files for both rCUDA library and server middlewares.
-  - framework/rCUDAd: the rCUDA server daemon.
-  - framework/rCUDAl: the rCUDA interception library of NVIDIA Runtime library.

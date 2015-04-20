@@ -30,20 +30,45 @@ def parse_args():
         dest = 'server_file',
         help = 'rCUDA server file.'
     )
+    parser.add_option('--rcuda-libcudart',
+        dest = 'rcuda_libcudart',
+        default = '/home/pak/src/rCUDA/rCUDA-5.0/framework/rCUDAl/libcudart.so',
+        help = 'rCUDA\'s libcudart.so path [default = \'/home/pak/src/rCUDA/rCUDA-5.0/framework/rCUDAl/libcudart.so\']'
+    )
+    parser.add_option('--nvidia-libcudart',
+        dest = 'nvidia_libcudart',
+        default = '/usr/local/cuda-6.5/lib64/libcudart.so',
+        help = 'NVIDIA\'s libcudart.so path [default = \'/usr/local/cuda-6.5/lib64/libcudart.so\']'
+    )
+    parser.add_option('--switch-threshold',
+        dest = 'switch_threshold',
+        default = 'RCUDA',
+        help = 'Switching threshold value (positive integer, RCUDA, NVIDIA) [default = RCUDA]'
+    )
+    parser.add_option('--sock-path',
+        dest = 'sock_path',
+        default = '/tmp/mrcuda.sock',
+        help = 'Switching socket path [default = /tmp/mrcuda.sock]'
+    )
 
     options, args = parser.parse_args()
     if not options.server_address and not options.server_file:
         parser.error('either -s or -f option is required.')
     elif options.server_address and options.server_file:
         parser.error('-s and -f options cannot be used at the same time.')
+    if options.switch_threshold != 'RCUDA' and options.switch_threshold != 'NVIDIA':
+        try:
+            int(options.switch_threshold)
+        except ValueError:
+            parser.error('Only a positive integer, "RCUDA", or "NVIDIA" are allowed as a value of --switch-threshold.')
     if len(args) == 0:
         parser.error('Please specify PROGRAM to execute.')
     return options, args
 
 def main(options, args):
     framework_directory = os.path.dirname(os.path.abspath(__file__))
-    rCUDAl_directory = os.path.join(framework_directory, 'rCUDAl') 
-    ld_lib_path = rCUDAl_directory
+    framework_lib_directory = os.path.join(framework_directory, 'lib64') 
+    ld_lib_path = framework_lib_directory
 
     program_args = args
 
@@ -54,6 +79,10 @@ def main(options, args):
     environment['LD_LIBRARY_PATH'] = ld_lib_path
     environment['RCUDAPROTO'] = options.network_type
     environment['RCUDA_DEVICE_COUNT'] = str(options.number_of_devices)
+    environment['MRCUDA_NVIDIA_LIB_PATH'] = options.nvidia_libcudart
+    environment['MRCUDA_RCUDA_LIB_PATH'] = options.rcuda_libcudart
+    environment['MRCUDA_SWITCH_THRESHOLD'] = options.switch_threshold
+    environment['MRCUDA_SOCK_PATH'] = options.sock_path
 
     i = 0
     if options.server_address:
@@ -86,3 +115,4 @@ def main(options, args):
 if __name__ == '__main__':
     options, args = parse_args()
     main(options, args)
+
