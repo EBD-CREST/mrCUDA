@@ -2,105 +2,25 @@
 #define __MRCUDA_RECORD__HEADER__
 
 #include <cuda_runtime.h>
+#include <glib.h>
 
 #include "common.h"
-#include "mrcuda.h"
+#include "datatypes.h"
 
-typedef struct MRecord
-{
-    char *functionName;
-    int skip_mock_stream;
-    union 
-    {
-        struct cudaRegisterFatBinary
-        {
-            void *fatCubin;
-            void **fatCubinHandle;
-        } cudaRegisterFatBinary;
-        struct cudaRegisterFunction
-        {
-           void ***fatCubinHandle;
-           const char *hostFun;
-           char *deviceFun;
-           const char *deviceName;
-           int thread_limit;
-           uint3 *tid;
-           uint3 *bid;
-           dim3 *bDim;
-           dim3 *gDim;
-           int *wSize;
-        } cudaRegisterFunction;
-        struct cudaRegisterVar
-        {
-            void ***fatCubinHandle;
-            char *hostVar;
-            char *deviceAddress;
-            const char *deviceName;
-            int ext;
-            int size;
-            int constant;
-            int global;
-        } cudaRegisterVar;
-        struct cudaRegisterTexture
-        {
-            void ***fatCubinHandle;
-            const struct textureReference *hostVar;
-            const void **deviceAddress;
-            const char *deviceName;
-            int dim;
-            int norm;
-            int ext;
-        } cudaRegisterTexture;
-        struct cudaUnregisterFatBinary
-        {
-            void ***fatCubinHandle;
-        } cudaUnregisterFatBinary;
-        struct cudaMalloc
-        {
-            void *devPtr;
-            size_t size;
-        } cudaMalloc;
-        struct cudaFree
-        {
-            void *devPtr;
-        } cudaFree;
-        struct cudaBindTexture
-        {
-            size_t offset;
-            const struct textureReference *texref;
-            const void *devPtr;
-            struct cudaChannelFormatDesc desc;
-            size_t size;
-        } cudaBindTexture;
-        struct cudaStreamCreate
-        {
-            cudaStream_t *pStream;
-        } cudaStreamCreate;
-        struct cudaSetDeviceFlags
-        {
-            unsigned int flags;
-        } cudaSetDeviceFlags;
-    } data;
-    void (*replayFunc)(struct MRecord*);
-    struct MRecord *next;
-} MRecord;
-
-extern MRecord *mrcudaRecordHeadPtr;
-extern MRecord *mrcudaRecordTailPtr;
-
-extern unsigned long int __cudaMemcpySizeTotal;
-extern unsigned long int __cudaMemcpyToSymbolSizeTotal;
+extern MRecordGPU_t *mrecordGPUList;
 
 /**
  * Initialize the record/replay module.
  * Exit and report error if found.
+ * @param numGPUs total number of GPUs
  */
-void mrcuda_record_init();
+void mrcuda_record_init(int numGPUs);
 
 /**
  * Finalize the record/replay module.
+ * @param numGPUs total number of GPUs
  */
-void mrcuda_record_fini();
+void mrcuda_record_fini(int numGPUs);
 
 /**
  * Record a cudaRegisterFatBinary call.

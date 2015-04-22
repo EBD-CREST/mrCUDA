@@ -8,6 +8,10 @@
 #include <dlfcn.h>
 #include <string.h>
 #include <pthread.h>
+#include <glib.h>
+#include <sys/types.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 
 // For manual profiling
 #include <sys/time.h>
@@ -21,6 +25,9 @@ MRCUDASym *mrcudaSymNvidia;
 MRCUDASym *mrcudaSymRCUDA;
 MRCUDASym *mrcudaSymDefault;
 
+int mrcudaNumGPUs = 0;
+MRCUDAGPUInfo *mrcudaGPUInfos = NULL;
+
 static char *__rCUDALibPath;
 static char *__nvidiaLibPath;
 
@@ -31,6 +38,59 @@ static pthread_mutex_t __processing_func_mutex;
 enum mrcudaStateEnum mrcudaState = MRCUDA_STATE_UNINITIALIZED;
 
 long int mrcudaNumLaunchSwitchThreashold;
+
+GHashTable *mrcudaGPUThreadMap = NULL;
+
+/**
+ * Initialize mrcudaGPUThreadMap.
+ * @return 0 if success, other number otherwise.
+ */
+static inline int __init_mrcuda_gpu_thread_map()
+{
+    if(mrcudaGPUThreadMap == NULL)
+        mrcudaGPUThreadMap = g_hash_table_new(g_direct_hash, g_direct_equal);
+    return mrcudaGPUThreadMap == NULL ? -1 : 0;
+}
+
+/**
+ * Get the ID of the calling thread.
+ * @return thread ID.
+ */
+static inline pid_t gettid()
+{
+    return (pid_t)syscall(SYS_gettid);
+}
+
+/**
+ * Get the GPU assigned to the calling thread.
+ * @return a pointer to the assigned GPU.
+ */
+MRCUDAGPU *mrcuda_get_current_gpu()
+{
+    pid_t tid;
+    MRCUDAGPU *mrcudaGPU;
+    __init_mrcuda_gpu_thread_map();
+    tid = gettid();
+    if((mrcudaGPU = g_hash_table_lookup(mrcudaGPUThreadMap, tid)) == NULL)
+    {
+        mrcudaGPU = mrcudaGPUList;
+        g_hash_table_insert(mrcudaGPUThreadMap, tid, mrcudaGPU);
+    }
+    return mrcudaGPU;
+}
+
+/**
+ * Set the GPU assigned to the calling thread.
+ * @param device virtual device ID.
+ */
+void mrcuda_set_current_gpu(int device)
+{
+    pid_t tid;
+    mrcuda_get_current_gpu();
+    tid = gettid();
+    g_hash_table_replace(mrcudaGPUThreadMap, tid, mrcudaGPUList[device]);
+}
+
 
 /**
  * Try to link the specified symbol to the handle.
@@ -215,8 +275,12 @@ static void __symlink_handle(MRCUDASym *mrcudaSym)
 __attribute__((constructor))
 void mrcuda_init()
 {
-    char *switch_threshold;
+    char *switchThreshold;
+    char *rCUDANumGPUs;
     char *endptr;
+    char *tmp;
+    char envName[32];
+    int i, j;
     if(mrcudaState == MRCUDA_STATE_UNINITIALIZED)
     {
         // Get configurations from environment variables.
@@ -232,15 +296,15 @@ void mrcuda_init()
         if(__sockPath == NULL || strlen(__sockPath) == 0)
             REPORT_ERROR_AND_EXIT("%s is not specified.\n", __SOCK_PATH_ENV_NAME__);
 
-        if((switch_threshold = getenv(__SWITCH_THRESHOLD_ENV_NAME__)) == NULL)
-            switch_threshold = "RCUDA";
+        if((switchThreshold = getenv(__SWITCH_THRESHOLD_ENV_NAME__)) == NULL)
+            switchThreshold = "RCUDA";
 
-        if(strcmp(switch_threshold, "RCUDA") == 0)
+        if(strcmp(switchThreshold, "RCUDA") == 0)
         {
             mrcudaNumLaunchSwitchThreashold = -1;
             mrcudaState = MRCUDA_STATE_RUNNING_RCUDA;
         }
-        else if(strcmp(switch_threshold, "NVIDIA") == 0)
+        else if(strcmp(switchThreshold, "NVIDIA") == 0)
         {
             mrcudaNumLaunchSwitchThreashold = -1;
             mrcudaState = MRCUDA_STATE_RUNNING_NVIDIA;
@@ -248,11 +312,49 @@ void mrcuda_init()
         else
         {
             mrcudaState = MRCUDA_STATE_RUNNING_RCUDA;
-            mrcudaNumLaunchSwitchThreashold = strtol(switch_threshold, &endptr, 10);
+            mrcudaNumLaunchSwitchThreashold = strtol(switchThreshold, &endptr, 10);
             if(*endptr != '\0')
                 REPORT_ERROR_AND_EXIT("%s's value is not valid.\n", __SWITCH_THRESHOLD_ENV_NAME__);
         }
 
+        // Initialize mrcudaNumGPUs and mrcudaGPUInfos
+        if((rCUDANumGPUs = getenv("RCUDA_DEVICE_COUNT")) == NULL)
+            REPORT_ERROR_AND_EXIT("RCUDA_DEVICE_COUNT is not specified.\n");
+        else
+        {
+            mrcudaNumGPUs = (int)strtol(rCUDANumGPUs, &endptr, 10);
+            if(*endptr != '\0')
+                REPORT_ERROR_AND_EXIT("RCUDA_DEVICE_COUNT's value is not valid.\n");
+            else if((mrcudaGPUInfos = calloc(mrcudaNumGPUs, sizeof(MRCUDAGPUInfo))) == NULL)
+                REPORT_ERROR_AND_EXIT("Cannot allocate memmory for mrcudaGPUInfos.\n");
+            for(i = 0; i < mrcudaNumGPUs; i++)
+            {
+                mrcudaGPUInfos[i].virtualNumber = i;
+                if(mrcudaState == MRCUDA_STATE_RUNNING_RCUDA)
+                {
+                    sprintf(envName, "RCUDA_DEVICE_%d", i);
+                    if((tmp = getenv(envName)) == NULL)
+                        REPORT_ERROR_AND_EXIT("%s is not specified.\n", envName);
+                    j = 0;
+                    while(tmp[j] != '\0' && tmp[j] != ':')
+                        j++;
+                    if(tmp[j] == ':')
+                    {
+                        mrcudaGPUInfos[i].realNumber = (int)strtol(&(tmp[j]), &endptr, 10);
+                        if(*endptr != '\0')
+                            REPORT_ERROR_AND_EXIT("%s's value is not valid.\n", envName);
+                    }
+                    else
+                        mrcudaGPUInfos[i].realNumber = 0;
+                    mrcudaGPUInfos[i].status = MRCUDA_GPU_STATUS_RCUDA;
+                }
+                else
+                {
+                    mrcudaGPUInfos[i].realNumber = i;
+                    mrcudaGPUInfos[i].status = MRCUDA_GPU_STATUS_NATIVE;
+                }
+            }
+        }
 
         // Allocate space for global variables.
         mrcudaSymRCUDA = malloc(sizeof(MRCUDASym));
@@ -285,7 +387,7 @@ void mrcuda_init()
         __symlink_handle(mrcudaSymNvidia);
 
         // Initialize the record/replay module.
-        mrcuda_record_init();
+        mrcuda_record_init(mrcudaNumGPUs);
 
         // Initialize mutex for switching locking.
         pthread_mutex_init(&__processing_func_mutex, NULL);
@@ -321,7 +423,7 @@ int mrcuda_fini()
             free(mrcudaSymNvidia);
         }
 
-        mrcuda_record_fini();
+        mrcuda_record_fini(mrcudaNumGPUs);
 
         pthread_mutex_destroy(&__processing_func_mutex);
 

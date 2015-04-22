@@ -2,6 +2,7 @@
 #define __MRCUDA_COMMON__HEADER__
 
 #include <stdio.h>
+#include <glib.h>
 
 #include <config.h>
 
@@ -21,3 +22,6 @@
     } while(0);
 
 #endif
+
+
+
