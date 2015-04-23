@@ -8,31 +8,30 @@
 /**
  * Malloc memory on shared-memory region.
  * @param size the size of memory to be allocated.
- * @param key return value of associating key.
- * @return a ptr to the allocated region on success. NULL otherwise.
+ * @return a ptr to a MRCUDASharedMemLocalInfo_t on success. NULL otherwise.
  */
-void *mhelper_mem_malloc(size_t size, key_t *key);
+MRCUDASharedMemLocalInfo_t *mhelper_mem_malloc(size_t size);
 
 /**
- * Detach and destroy the shared region specified by the key.
- * @param key the key of the shared region.
+ * Detach and destroy the shared region specified by the sharedMemInfo.
+ * @param sharedMemInfo the information of the shared region.
  * @return 0 on success; other number otherwise.
  */
-int mhelper_mem_free(key_t key);
+int mhelper_mem_free(MRCUDASharedMemLocalInfo_t *sharedMemInfo);
 
 /**
- * Get the memory region associated with the specified key.
- * @param key the key of the shared region.
- * @return a ptr to the shared region on success. NULL otherwise.
+ * Get the memory region associated with the specified sharedMem.
+ * @param sharedMem the minimum information of the shared region.
+ * @return a ptr to a MRCUDASharedMemLocalInfo_t on success. NULL otherwise.
  */
-void *mhelper_mem_get(key_t key);
+MRCUDASharedMemLocalInfo_t *mhelper_mem_get(MRCUDASharedMem_t sharedMem);
 
 /**
- * Detach the shared region specified by the key.
- * @param key the key of the shared region.
+ * Detach the shared region specified by the sharedMemInfo.
+ * @param sharedMemInfo the information of the shared region.
  * @return 0 on success; another number otherwise.
  */
-int mhelper_mem_detach(key_t key);
+int mhelper_mem_detach(MRCUDASharedMemLocalInfo_t *sharedMemInfo);
 
 #endif /* __MRCUDA_INTERCOMM_MEM__HEADER__ */
 

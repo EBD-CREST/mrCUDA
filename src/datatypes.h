@@ -164,10 +164,17 @@ typedef struct MRCUDASym_t
     cudaError_t (*__mrcudaRegisterDeviceFunction)();
 } MRCUDASym_t;
 
+/* Shared-memory-related Structure */
 typedef struct MRCUDASharedMem_t {
     key_t key;  /* shared-memory key */
-    size_t size;    /* size of fatCubin */
+    size_t size;    /* size of the shared memory region */
 } MRCUDASharedMem_t;
+
+typedef struct MRCUDASharedMemLocalInfo_t {
+    MRCUDASharedMem_t sharedMem;
+    int shmid;
+    void *startAddr;
+} MRCUDASharedMemLocalInfo_t;
 
 /* Group of CUDA-related call parameter struct */
 typedef struct cudaRegisterFatBinary_t {
