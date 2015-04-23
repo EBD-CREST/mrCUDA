@@ -346,6 +346,7 @@ typedef struct MHelperResult_t {
 } MHelperResult_t;
 
 typedef struct MHelperProcess_t {
+    pid_t pid;
     int readPipe;
     int writePipe;
 } MHelperProcess_t;

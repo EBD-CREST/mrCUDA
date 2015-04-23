@@ -7,9 +7,11 @@
 /**
  * Create a helper process and assign the mrcudaGPU to it.
  * @param mrcudaGPU the GPU information to assign to the created process.
+ * @param helperProgPath the path to the helper application.
+ * @param gpuID the ID of the GPU the helper application will use.
  * @return a ptr to the created process on success; NULL otherwise.
  */
-MHelperProcess_t *mhelper_create(MRCUDAGPU_t *mrcudaGPU);
+MHelperProcess_t *mhelper_create(MRCUDAGPU_t *mrcudaGPU, const char *helperProgPath, int gpuID)
 
 /**
  * Destroy the helper process.
