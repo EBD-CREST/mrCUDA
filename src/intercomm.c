@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <signal.h>
+#include <cuda_runtime.h>
 
 #include "intercomm.h"
 #include "datatypes.h"
@@ -83,14 +84,34 @@ MHelperResult_t mhelper_call(MHelperProcess_t *process, MHelperCommand_t command
     ssize_t n;
     size_t remainingSize = sizeof(MHelperProcess_t);
     char *buf = (char *)&command;
+    MHelperResult_t result;
 
     while (remainingSize > 0) {
         n = write(process->writePipe, buf, remainingSize);
-        if (n < 0) {
-            // TODO: Something went wrong. Handle the error.
-        }
+        if (n < 0)
+            goto __mhelper_call_err_0;
         remainingSize -= n;
         buf += n;
     }
+
+    remainingSize = sizeof(MHelperResult_t);
+    buf = (char *)&result;
+    while (remainingSize > 0) {
+        n = read(process->readPipe, buf, remainingSize);
+        if (n < 0)
+            goto __mhelper_call_err_0;
+        remainingSize -= n;
+        buf += n;
+    }
+    if (result.id != command.id || result.type != command.type)
+        goto __mhelper_call_err_0;
+    return result;
+
+__mhelper_call_err_0:
+    result.id = command.id;
+    result.type = command.type;
+    result.internalError = -1;
+    result.cudaError = cudaSuccess;
+    return result;
 }
 
