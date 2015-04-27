@@ -45,6 +45,7 @@ MHelperProcess_t *mhelper_create(MRCUDAGPU_t *mrcudaGPU, const char *helperProgP
         mhelperProcess->readPipe = rPipePair[0];
         mhelperProcess->writePipe = wPipePair[1];
         mhelperProcess->pid = pid;
+        mrcudaGPU->mhelperProcess = mhelperProcess;
         return mhelperProcess;
     }
 
@@ -82,7 +83,7 @@ int mhelper_destroy(MHelperProcess_t *process)
 MHelperResult_t mhelper_call(MHelperProcess_t *process, MHelperCommand_t command)
 {
     ssize_t n;
-    size_t remainingSize = sizeof(MHelperProcess_t);
+    size_t remainingSize = sizeof(MHelperCommand_t);
     char *buf = (char *)&command;
     MHelperResult_t result;
 

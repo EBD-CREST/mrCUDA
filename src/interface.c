@@ -1,5 +1,6 @@
 #include "common.h"
 #include "mrcuda.h"
+#include "datatypes.h"
 #include "record.h"
 
 static long int __cudaLaunchCount = 0;
@@ -10,10 +11,12 @@ static long int __cudaLaunchCount = 0;
 void** __cudaRegisterFatBinary(void* fatCubin)
 {
     void **ret;
+    MRCUDAGPU_t *gpu;
     mrcuda_init();
     mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->__mrcudaRegisterFatBinary(fatCubin);
-    if(mrcudaSymDefault == mrcudaSymRCUDA)
+    gpu = mrcuda_get_current_gpu();
+    ret = gpu->defaultHandler->__mrcudaRegisterFatBinary(fatCubin);
+    if (mrcudaSymDefault == mrcudaSymRCUDA)
         mrcuda_record_cudaRegisterFatBinary(fatCubin, ret);
     mrcuda_function_call_release();
     return ret;

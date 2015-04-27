@@ -14,8 +14,6 @@
 static int mrcudaRecordCacheCounter = -1;
 MRecord *mrcudaRecordCache = NULL;
 
-MRGPU *mrGPUs = NULL;
-
 /**
  * Allocate a new MRecord and appropriately link the new one with the previous.
  * The pointer to the new MRecord is recorded into recordPtr.

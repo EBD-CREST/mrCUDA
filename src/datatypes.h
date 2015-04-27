@@ -7,10 +7,16 @@
 #include <sys/ipc.h>
 #include <sys/types.h>
 
+/* Pre-declared Structs */
+typedef struct MHelperProcess_t MHelperProcess_t;
+
 /* Struct of CUDA symbolic pointers */
 typedef struct MRCUDASym_t
 {
-    void *handle;
+    union {
+        void *symHandler;
+        MHelperProcess_t processHandler;
+    } handler;
 
     cudaError_t (*mrcudaDeviceReset)(void);
     cudaError_t (*mrcudaDeviceSynchronize)(void);
@@ -180,7 +186,7 @@ typedef struct MRCUDASharedMemLocalInfo_t {
 typedef struct cudaRegisterFatBinary_t {
     void *fatCubin;
     void **fatCubinHandle;
-    MRCUDASharedMem_t shminfo;
+    MRCUDASharedMem_t sharedMem;
 } cudaRegisterFatBinary_t;
 
 typedef struct cudaRegisterFunction_t {
@@ -343,13 +349,17 @@ typedef struct MHelperResult_t {
     MHelperCommandType_e type;
     int internalError;
     cudaError_t cudaError;
+    union {
+        cudaRegisterFatBinary_t cudaRegisterFatBinary;
+    } result;
 } MHelperResult_t;
 
-typedef struct MHelperProcess_t {
+struct MHelperProcess_t {
     pid_t pid;
     int readPipe;
     int writePipe;
-} MHelperProcess_t;
+    MRCUDASym_t *handle;
+};
 
 /* MRecordGPU Struct */
 typedef struct MRecordGPU_t {
@@ -376,6 +386,7 @@ typedef struct MRCUDAGPU_t {
     MRCUDAGPUStatus_e status;
     MRCUDASym_t *defaultHandler;
     MRecordGPU_t *mrecordGPU;
+    MHelperProcess_t *mhelperProcess;
 } MRCUDAGPU_t;
 
 #endif  /* __MRCUDA_DATATYPES__HEADER__ */
