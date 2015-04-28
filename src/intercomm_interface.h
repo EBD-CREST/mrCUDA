@@ -17,7 +17,7 @@ int mhelper_int_init(MRCUDASym_t **handler, MHelperProcess_t *process);
 /* Interfaces */
 
 void **mhelper_init_cudaRegisterFatBinary(void *fatCubin);
-void **mhelper_init_cudaRegisterFatBinary_internal(MHelperProcess_t *mhelperProcess, void *fatCubin);
+void **mhelper_init_cudaRegisterFatBinary_internal(MRCUDAGPU_t *mrcudaGPU, void *fatCubin);
 
 #endif /* __MRCUDA_INTERCOMM_INTERFACE__HEADER__ */
 

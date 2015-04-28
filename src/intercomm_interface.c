@@ -31,15 +31,16 @@ __mhelper_int_init_err_0:
 
 void **mhelper_init_cudaRegisterFatBinary(void *fatCubin)
 {
-    return mrcuda_get_current_gpu(mrcuda_get_current_gpu()->mhelperProcess, fatCubin);
+    return mrcuda_get_current_gpu(mrcuda_get_current_gpu(), fatCubin);
 }
 
-void **mhelper_init_cudaRegisterFatBinary_internal(MHelperProcess_t *mhelperProcess, void *fatCubin)
+void **mhelper_init_cudaRegisterFatBinary_internal(MRCUDAGPU_t *mrcudaGPU, void *fatCubin)
 {
     MHelperCommand_t command;
     MHelperResult_t result;
     void *addr;
     void **ret;
+    MHelperProcess_t *mhelperProcess = mrcudaGPU->mhelperProcess;
 
     __fatBinC_Wrapper_t *fatCubinWrapper = (__fatBinC_Wrapper_t *)(fatCubin);
     computeFatBinaryFormat_t fatCubinHeader = (computeFatBinaryFormat_t)(fatCubinWrapper->data);
@@ -49,12 +50,12 @@ void **mhelper_init_cudaRegisterFatBinary_internal(MHelperProcess_t *mhelperProc
     addr = sharedMemInfo->startAddr;
     addr = mempcpy(addr, fatCubin, sizeof(__fatBinC_Wraper_t));
     addr = mempcpy(addr, fatCubinWrapper->data, fatCubinSize - sizeof(__fatBinC_Wrapper_t));
-    command.id = rand();
+    command.id = mhelper_generate_command_id(mrcudaGPU);
     command.type = MRCOMMAND_TYPE_CUDAREGISTERFATBINARY;
     command.command.cudaRegisterFatBinary.sharedMem = sharedMemInfo->sharedMem;
     mhelper_mem_detach(sharedMemInfo);
     result = mhelper_call(mhelperProcess, command);
-    if (result.id == command.id && result.internalError == 0)
+    if (result.internalError == 0)
         ret = result.result.cudaRegisterFatBinary.fatCubinHandle;
     else
         ret = NULL;

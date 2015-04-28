@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <signal.h>
 #include <cuda_runtime.h>
 
@@ -114,5 +115,15 @@ __mhelper_call_err_0:
     result.internalError = -1;
     result.cudaError = cudaSuccess;
     return result;
+}
+
+/**
+ * Generate a unique ID for a command to be used with the specified mrcudaGPU.
+ * @param mrcudaGPU a ptr to a MRCUDAGPU_t
+ * @return a unique ID
+ */
+int mhelper_generate_command_id(MRCUDAGPU_t *mrcudaGPU)
+{
+    return (rand() << 4) | mrcudaGPU->virtualNumber;
 }
 

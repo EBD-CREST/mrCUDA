@@ -28,5 +28,12 @@ int mhelper_destroy(MHelperProcess_t *process);
  */
 MHelperResult_t mhelper_call(MHelperProcess_t *process, MHelperCommand_t command);
 
+/**
+ * Generate a unique ID for a command to be used with the specified mrcudaGPU.
+ * @param mrcudaGPU a ptr to a MRCUDAGPU_t
+ * @return a unique ID
+ */
+int mhelper_generate_command_id(MRCUDAGPU_t *mrcudaGPU);
+
 #endif /* __MRCUDA_INTERCOMM__HEADER__ */
 

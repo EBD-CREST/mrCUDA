@@ -6,9 +6,11 @@
 #include <sys/shm.h>
 #include <sys/ipc.h>
 #include <sys/types.h>
+#include <pthread.h>
 
 /* Pre-declared Structs */
 typedef struct MHelperProcess_t MHelperProcess_t;
+typedef struct MRCUDAGPU_t MRCUDAGPU_t;
 
 /* Struct of CUDA symbolic pointers */
 typedef struct MRCUDASym_t
@@ -293,6 +295,19 @@ typedef struct cudaSetDeviceFlags_t {
     unsigned int flags;
 } cudaSetDeviceFlags_t;
 
+typedef struct cudaMemcpyToSymbol_t {
+    size_t dataSize;
+    cudaMemcpyKind kind;
+    MRCUDASharedMem_t sharedMem;
+} cudaMemcpyToSymbol_t;
+
+typedef struct cudaMemcpy_t {
+    void *dst;
+    size_t size;
+    cudaMemcpyKind kind;
+    MRCUDASharedMem_t sharedMem;
+} cudaMemcpy_t;
+
 /* MRecord Struct */
 typedef struct MRecord_t {
     char *functionName;
@@ -324,7 +339,9 @@ typedef enum MHelperCommandType_e {
     MRCOMMAND_TYPE_CUDAFREE,
     MRCOMMAND_TYPE_CUDABINDTEXTURE,
     MRCOMMAND_TYPE_CUDASTREAMCREATE,
-    MRCOMMAND_TYPE_CUDASETDEVICEFLAGS
+    MRCOMMAND_TYPE_CUDASETDEVICEFLAGS,
+    MRCOMMAND_TYPE_CUDAMEMCPYTOSYMBOL,
+    MRCOMMAND_TYPE_CUDAMEMCPY
 } MHelperCommandType_e;
 
 typedef struct MHelperCommand_t {
@@ -341,6 +358,8 @@ typedef struct MHelperCommand_t {
         cudaBindTexture_t cudaBindTexture;
         cudaStreamCreate_t cudaStreamCreate;
         cudaSetDeviceFlags_t cudaSetDeviceFlags;
+        cudaMemcpyToSymbol_t cudaMemcpyToSymbol;
+        cudaMemcpy_t cudaMemcpy;
     } command;
 } MHelperCommand_t;
 
@@ -363,7 +382,7 @@ struct MHelperProcess_t {
 
 /* MRecordGPU Struct */
 typedef struct MRecordGPU_t {
-    int gpuNumber;
+    MRCUDAGPU_t *mrcudaGPU;
     MRecord_t *mrcudaRecordHeadPtr;
     MRecord_t *mrcudaRecordTailPtr;
     GHashTable *activeMemoryTable;
@@ -372,22 +391,28 @@ typedef struct MRecordGPU_t {
     GHashTable *hostAllocTable;
 } MRecordGPU_t;
 
-typedef enum MRCUDAGPUStatus_e
-{
+/* MRCUDAGPU Struct */
+typedef enum MRCUDAGPUStatus_e {
     MRCUDA_GPU_STATUS_RCUDA = 0,
     MRCUDA_GPU_STATUS_NATIVE,
     MRCUDA_GPU_STATUS_HELPER
 } MRCUDAGPUStatus_e;
 
-/* MRCUDAGPU Struct */
-typedef struct MRCUDAGPU_t {
+struct MRCUDAGPU_t {
     int virtualNumber;
     int realNumber;
     MRCUDAGPUStatus_e status;
+    pthread_mutex_t mutex;
     MRCUDASym_t *defaultHandler;
     MRecordGPU_t *mrecordGPU;
     MHelperProcess_t *mhelperProcess;
-} MRCUDAGPU_t;
+};
+
+typedef enum MRCUDAState_e {
+    MRCUDA_STATE_UNINITIALIZED = 0,
+    MRCUDA_STATE_RUNNING,
+    MRCUDA_STATE_FINALIZED
+} MRCUDAState_e;
 
 #endif  /* __MRCUDA_DATATYPES__HEADER__ */
 
