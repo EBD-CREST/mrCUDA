@@ -2,12 +2,17 @@
 #include <signal.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <cuda.h>
 #include <cuda_runtime.h>
 #include <fatBinaryCtl.h>
 
 #include "common.h"
 #include "datatypes.h"
 #include "intercomm_mem.h"
+
+extern void** CUDARTAPI __cudaRegisterFatBinary(
+  void *fatCubin
+);
 
 static int gpuID;
 
@@ -34,9 +39,21 @@ static int exec_cudaRegisterFatBinary(MHelperCommand_t command, MHelperResult_t 
     result->cudaError = cudaSuccess;
     result->result.cudaRegisterFatBinary.fatCubinHandle = fatCubinHandle;
     mhelper_mem_free(sharedMemInfo);
+    return 0;
 
 __exec_cudaRegisterFatBinary_err_0:
     return -1;
+}
+
+static int exec_cuCtxCreate(MHelperCommand_t command, MHelperResult_t *result)
+{
+    CUcontext pctx;
+
+    result->cudaError = cuCtxCreate(&pctx, CU_CTX_SCHED_AUTO, gpuID) == CUDA_SUCCESS ? cudaSuccess : cudaErrorApiFailureBase;
+    result->id = command.id;
+    result->type = command.type;
+    result->internalError = 0;
+    return 0;
 }
 
 /**
@@ -55,12 +72,12 @@ void sig_handler(int signum)
  */
 static int receive_command(MHelperCommand_t *command)
 {
-    ssize_t n;
+    size_t n;
     size_t remainingSize = sizeof(MHelperCommand_t);
     char *buf = (char *)command;
 
     while (remainingSize > 0) {
-        n = read(STDIN, buf, remainingSize);
+        n = fread(buf, remainingSize, 1, stdin);
         if (n < 0)
             goto __receive_command_err_0;
         remainingSize -= n;
@@ -82,6 +99,8 @@ __receive_command_err_0:
 static int execute_command(MHelperCommand_t command, MHelperResult_t *result)
 {
     switch (command.type) {
+        case MRCOMMAND_TYPE_CUCTXCREATE:
+            return exec_cuCtxCreate(command, result);
         case MRCOMMAND_TYPE_CUDAREGISTERFATBINARY:
             return exec_cudaRegisterFatBinary(command, result);
     }
@@ -95,12 +114,12 @@ static int execute_command(MHelperCommand_t command, MHelperResult_t *result)
  */
 static int sendback_result(MHelperResult_t result)
 {
-    ssize_t n;
+    size_t n;
     size_t remainingSize = sizeof(MHelperResult_t);
     char *buf = (char *)&result;
 
     while (remainingSize > 0) {
-        n = write(STDOUT, buf, remainingSize);
+        n = fwrite(buf, remainingSize, 1, stdout);
         if (n < 0)
             goto __sendback_result_err_0;
         remainingSize -= n;

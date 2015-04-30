@@ -31,8 +31,8 @@ MHelperProcess_t *mhelper_create(MRCUDAGPU_t *mrcudaGPU, const char *helperProgP
     if (pid == 0) {   // child process
         close(wPipePair[1]);
         close(rPipePair[0]);
-        dup2(wPipePair[0], STDIN);
-        dup2(rPipePair[1], STDOUT);
+        dup2(wPipePair[0], fileno(stdin));
+        dup2(rPipePair[1], fileno(stdout));
         sprintf(gpuIDStr, "%d", gpuID);
         execl(helperProgPath, helperProgPath, gpuIDStr, "\0");
         perror("Helper Program Exec");

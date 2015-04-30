@@ -112,7 +112,7 @@ void mrcuda_record_cudaHostAlloc(MRCUDAGPU_t *mrcudaGPU, void **pHost, size_t si
 /**
  * Record a cudaSetDeviceFlags call.
  */
-void mrcuda_record_cudaSetDeviceFlags(MRCUDAGPU_t, *mrcudaGPU, unsigned int flags);
+void mrcuda_record_cudaSetDeviceFlags(MRCUDAGPU_t *mrcudaGPU, unsigned int flags);
 
 
 /**
@@ -165,7 +165,7 @@ void mrcuda_replay_cudaStreamCreate(MRCUDAGPU_t *mrcudaGPU, MRecord_t *record);
  * This function looks for the library used for allocating the ptr.
  * The dual function of this call is mrcuda_record_cudaHostAlloc.
  */
-MRCUDASym* mrcuda_replay_cudaFreeHost(MRCUDAGPU_t *mrcudaGPU, void *ptr);
+MRCUDASym_t *mrcuda_replay_cudaFreeHost(MRCUDAGPU_t *mrcudaGPU, void *ptr);
 
 /**
  * Replay a cudaSetDeviceFlags call.
@@ -177,12 +177,21 @@ void mrcuda_replay_cudaSetDeviceFlags(MRCUDAGPU_t *mrcudaGPU, MRecord_t *record)
  * Exit and report error if an error is found.
  * @param mrcudaGPU a ptr to a MRCUDAGPU_t that the sync mem will be performed on.
  */
-void mrcuda_sync_mem(MRCUDAGPU_t *mrcudaGPU)
+void mrcuda_sync_mem(MRCUDAGPU_t *mrcudaGPU);
 
 /**
  * Simulate cuda streams on the native CUDA so that the number of streams are equaled to that of rCUDA.
  * @param mrcudaGPU a ptr to a MRCUDAGPU_t that the simulate stream will be performed on.
  */
-void mrcuda_simulate_stream(MRCUDAGPU_t *mrcudaGPU)
+void mrcuda_simulate_stream(MRCUDAGPU_t *mrcudaGPU);
+
+/**
+ * Simulate cuCtxCreate on the specified gpuID.
+ * If mrcudaGPU->status == MRCUDA_GPU_STATUS_HELPER, ask the helper to handle the command.
+ * @param mrcudaGPU a ptr to a MRCUDAGPU_t.
+ * @param gpuID the ID of the GPU a context will be created on.
+ * @return 0 on success; -1 otherwise.
+ */
+int mrcuda_simulate_cuCtxCreate(MRCUDAGPU_t *mrcudaGPU, int gpuID);
 
 #endif

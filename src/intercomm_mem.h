@@ -5,6 +5,8 @@
 #include <sys/ipc.h>
 #include <sys/types.h>
 
+#include "datatypes.h"
+
 /**
  * Malloc memory on shared-memory region.
  * @param size the size of memory to be allocated.

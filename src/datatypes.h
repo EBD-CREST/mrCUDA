@@ -17,7 +17,7 @@ typedef struct MRCUDASym_t
 {
     union {
         void *symHandler;
-        MHelperProcess_t processHandler;
+        MHelperProcess_t *processHandler;
     } handler;
 
     cudaError_t (*mrcudaDeviceReset)(void);
@@ -194,18 +194,23 @@ typedef struct cudaRegisterFatBinary_t {
 typedef struct cudaRegisterFunction_t {
     void **fatCubinHandle;
     union {
-        char *ptr;
-        offset_t offset;    /* relative to the start of the specified shared memory. */
+        const char *ptr;
+        size_t offset;    /* relative to the start of the specified shared memory. */
     } hostFun;
     union {
         char *ptr;
-        offset_t offset;    /* relative to the start of the specified shared memory. */
+        size_t offset;    /* relative to the start of the specified shared memory. */
     } deviceFun;
     union {
-        char *ptr;
-        offset_t offset;    /* relative to the start of the specified shared memory. */
+        const char *ptr;
+        size_t offset;    /* relative to the start of the specified shared memory. */
     } deviceName;
     int thread_limit;
+    uint3 tid;
+    uint3 bid;
+    dim3 bDim;
+    dim3 gDim;
+    int wSize;
     MRCUDASharedMem_t shminfo;
     /** 
      * pointer to cudaRegisterFatBinary_t.fatCubinHandle
@@ -218,15 +223,15 @@ typedef struct cudaRegisterVar_t {
     void **fatCubinHandle;
     union {
         char *ptr;
-        offset_t offset;
+        size_t offset;
     } hostVar;
     union {
         char *ptr;
-        offset_t offset;
+        size_t offset;
     } deviceAddress;
     union {
-        char *ptr;
-        offset_t offset;
+        const char *ptr;
+        size_t offset;
     } deviceName;
     int ext;
     int size;
@@ -243,13 +248,13 @@ typedef struct cudaRegisterVar_t {
 typedef struct cudaRegisterTexture_t {
     void **fatCubinHandle;
     union {
-        struct textureReference *ptr;
-        offset_t offset;
+        const struct textureReference *ptr;
+        size_t offset;
     } hostVar;
     const void **deviceAddress;
     union {
-        char *ptr;
-        offset_t offset;
+        const char *ptr;
+        size_t offset;
     } deviceName;
     int dim;
     int norm;
@@ -297,14 +302,14 @@ typedef struct cudaSetDeviceFlags_t {
 
 typedef struct cudaMemcpyToSymbol_t {
     size_t dataSize;
-    cudaMemcpyKind kind;
+    enum cudaMemcpyKind kind;
     MRCUDASharedMem_t sharedMem;
 } cudaMemcpyToSymbol_t;
 
 typedef struct cudaMemcpy_t {
     void *dst;
     size_t size;
-    cudaMemcpyKind kind;
+    enum cudaMemcpyKind kind;
     MRCUDASharedMem_t sharedMem;
 } cudaMemcpy_t;
 
@@ -324,9 +329,9 @@ typedef struct MRecord_t {
         cudaStreamCreate_t cudaStreamCreate;
         cudaSetDeviceFlags_t cudaSetDeviceFlags;
     } data;
-    void (*replayFunc)(struct MRecord_t*);
+    void (*replayFunc)(MRCUDAGPU_t *, struct MRecord_t*);
     struct MRecord_t *next;
-} MRecord;
+} MRecord_t;
 
 /* Communication-related Structs */
 typedef enum MHelperCommandType_e {
@@ -341,7 +346,8 @@ typedef enum MHelperCommandType_e {
     MRCOMMAND_TYPE_CUDASTREAMCREATE,
     MRCOMMAND_TYPE_CUDASETDEVICEFLAGS,
     MRCOMMAND_TYPE_CUDAMEMCPYTOSYMBOL,
-    MRCOMMAND_TYPE_CUDAMEMCPY
+    MRCOMMAND_TYPE_CUDAMEMCPY,
+    MRCOMMAND_TYPE_CUCTXCREATE
 } MHelperCommandType_e;
 
 typedef struct MHelperCommand_t {

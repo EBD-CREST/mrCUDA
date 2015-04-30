@@ -1,8 +1,11 @@
+#define _GNU_SOURCE
+
 #include "common.h"
 #include "mrcuda.h"
 #include "record.h"
 #include "comm.h"
 #include "datatypes.h"
+#include "intercomm.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,12 +23,13 @@
 #define __RCUDA_LIBRARY_PATH_ENV_NAME__ "MRCUDA_RCUDA_LIB_PATH"
 #define __NVIDIA_LIBRARY_PATH_ENV_NAME__ "MRCUDA_NVIDIA_LIB_PATH"
 #define __SOCK_PATH_ENV_NAME__ "MRCUDA_SOCK_PATH"
+#define __MHELPER_PATH_ENV_NAME__ "MHELPER_PATH"
 #define __LOCALHOST__ "localhost"
 
 MRCUDAState_e mrcudaState;
 
-MRCUDASym *mrcudaSymNvidia;
-MRCUDASym *mrcudaSymRCUDA;
+MRCUDASym_t *mrcudaSymNvidia;
+MRCUDASym_t *mrcudaSymRCUDA;
 
 int mrcudaNumGPUs = 0;
 MRCUDAGPU_t *mrcudaGPUList;
@@ -37,7 +41,7 @@ static char *__helperPath;
 char *__sockPath;
 
 static pthread_mutex_t __switch_mutex;
-static int __hasNativeGPU;
+static int __hasNativeGPU = 0;
 
 GHashTable *mrcudaGPUThreadMap = NULL;
 
@@ -47,8 +51,8 @@ GHashTable *mrcudaGPUThreadMap = NULL;
  */
 static inline int __init_mrcuda_gpu_thread_map()
 {
-    if(mrcudaGPUThreadMap == NULL)
-        mrcudaGPUThreadMap = g_hash_table_new(g_direct_hash, g_direct_equal);
+    if (mrcudaGPUThreadMap == NULL)
+        mrcudaGPUThreadMap = g_hash_table_new(g_int_hash, g_int_equal);
     return mrcudaGPUThreadMap == NULL ? -1 : 0;
 }
 
@@ -71,9 +75,9 @@ MRCUDAGPU_t *mrcuda_get_current_gpu()
     MRCUDAGPU_t *mrcudaGPU;
     __init_mrcuda_gpu_thread_map();
     tid = gettid();
-    if ((mrcudaGPU = g_hash_table_lookup(mrcudaGPUThreadMap, tid)) == NULL) {
+    if ((mrcudaGPU = g_hash_table_lookup(mrcudaGPUThreadMap, &tid)) == NULL) {
         mrcudaGPU = mrcudaGPUList;
-        g_hash_table_insert(mrcudaGPUThreadMap, tid, mrcudaGPU);
+        g_hash_table_insert(mrcudaGPUThreadMap, &tid, mrcudaGPU);
     }
     return mrcudaGPU;
 }
@@ -87,7 +91,7 @@ void mrcuda_set_current_gpu(int device)
     pid_t tid;
     mrcuda_get_current_gpu();
     tid = gettid();
-    g_hash_table_replace(mrcudaGPUThreadMap, tid, mrcudaGPUList[device]);
+    g_hash_table_replace(mrcudaGPUThreadMap, &tid, &(mrcudaGPUList[device]));
 }
 
 
@@ -113,7 +117,7 @@ static inline void *__safe_dlsym(void *handle, const char *symbol)
  * Symlink functions of the handle.
  * @param mrcudaSym handle to be sym-linked.
  */
-static void __symlink_handle(MRCUDASym *mrcudaSym)
+static void __symlink_handle(MRCUDASym_t *mrcudaSym)
 {
     mrcudaSym->mrcudaDeviceReset = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaDeviceReset");
     mrcudaSym->mrcudaDeviceSynchronize = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaDeviceSynchronize");
@@ -284,35 +288,39 @@ void mrcuda_init()
     if (mrcudaState == MRCUDA_STATE_UNINITIALIZED) {
         // Get configurations from environment variables.
         __rCUDALibPath = getenv(__RCUDA_LIBRARY_PATH_ENV_NAME__);
-        if(__rCUDALibPath == NULL || strlen(__rCUDALibPath) == 0)
+        if (__rCUDALibPath == NULL || strlen(__rCUDALibPath) == 0)
             REPORT_ERROR_AND_EXIT("%s is not specified.\n", __RCUDA_LIBRARY_PATH_ENV_NAME__);
 
         __nvidiaLibPath = getenv(__NVIDIA_LIBRARY_PATH_ENV_NAME__);
-        if(__nvidiaLibPath == NULL || strlen(__nvidiaLibPath) == 0)
+        if (__nvidiaLibPath == NULL || strlen(__nvidiaLibPath) == 0)
             REPORT_ERROR_AND_EXIT("%s is not specified.\n", __NVIDIA_LIBRARY_PATH_ENV_NAME__);
 
         __sockPath = getenv(__SOCK_PATH_ENV_NAME__);
-        if(__sockPath == NULL || strlen(__sockPath) == 0)
+        if (__sockPath == NULL || strlen(__sockPath) == 0)
             REPORT_ERROR_AND_EXIT("%s is not specified.\n", __SOCK_PATH_ENV_NAME__);
 
+        __helperPath = getenv(__MHELPER_PATH_ENV_NAME__);
+        if (__helperPath == NULL || strlen(__helperPath) == 0)
+            REPORT_ERROR_AND_EXIT("%s is not specified.\n", __MHELPER_PATH_ENV_NAME__);
+
         // Initialize mrcudaNumGPUs and mrcudaGPUInfos
-        if((rCUDANumGPUs = getenv("RCUDA_DEVICE_COUNT")) == NULL)
+        if ((rCUDANumGPUs = getenv("RCUDA_DEVICE_COUNT")) == NULL)
             REPORT_ERROR_AND_EXIT("RCUDA_DEVICE_COUNT is not specified.\n");
 
         // Allocate space for global variables.
-        if ((mrcudaSymRCUDA = malloc(sizeof(MRCUDASym))) == NULL)
+        if ((mrcudaSymRCUDA = malloc(sizeof(MRCUDASym_t))) == NULL)
             REPORT_ERROR_AND_EXIT("Cannot allocate space for mrcudaSymRCUDA.\n");
 
-        if ((mrcudaSymNvidia = malloc(sizeof(MRCUDASym))) == NULL)
+        if ((mrcudaSymNvidia = malloc(sizeof(MRCUDASym_t))) == NULL)
             REPORT_ERROR_AND_EXIT("Cannot allocate space for mrcudaSymNvidia.\n");
         
         // Create handles for CUDA libraries.
         mrcudaSymNvidia->handler.symHandler = dlopen(__nvidiaLibPath, RTLD_NOW | RTLD_GLOBAL);
-        if(mrcudaSymNvidia->handle.symHandler == NULL)
+        if (mrcudaSymNvidia->handler.symHandler == NULL)
             REPORT_ERROR_AND_EXIT("Cannot sym-link mrcudaSymNvidia.\n");
 
-        mrcudaSymRCUDA->handle.symHandler = dlopen(__rCUDALibPath, RTLD_NOW | RTLD_GLOBAL);
-        if(mrcudaSymRCUDA->handle.symHandler == NULL)
+        mrcudaSymRCUDA->handler.symHandler = dlopen(__rCUDALibPath, RTLD_NOW | RTLD_GLOBAL);
+        if (mrcudaSymRCUDA->handler.symHandler == NULL)
             REPORT_ERROR_AND_EXIT("Cannot sym-link mrcudaSymRCUDA.\n");
         
         // Symlink rCUDA and CUDA functions.
@@ -321,19 +329,20 @@ void mrcuda_init()
 
         // Initialize each GPU information.
         mrcudaNumGPUs = (int)strtol(rCUDANumGPUs, &endptr, 10);
-        if(*endptr != '\0')
+        if (*endptr != '\0')
             REPORT_ERROR_AND_EXIT("RCUDA_DEVICE_COUNT's value is not valid.\n");
-        else if((mrcudaGPUList = calloc(mrcudaNumGPUs, sizeof(MRCUDAGPU_t))) == NULL)
+        else if ((mrcudaGPUList = calloc(mrcudaNumGPUs, sizeof(MRCUDAGPU_t))) == NULL)
             REPORT_ERROR_AND_EXIT("Cannot allocate memmory for mrcudaGPUInfos.\n");
 
         for (i = 0; i < mrcudaNumGPUs; i++) {
             mrcudaGPUList[i].virtualNumber = i;
             sprintf(envName, "RCUDA_DEVICE_%d", i);
-            if((tmp = getenv(envName)) == NULL)
+            if ((tmp = getenv(envName)) == NULL)
                 REPORT_ERROR_AND_EXIT("%s is not specified.\n", envName);
             if (strcasestr(tmp, __LOCALHOST__) == NULL) {   // native GPU
                 mrcudaGPUList[i].status = MRCUDA_GPU_STATUS_NATIVE;
                 mrcudaGPUList[i].defaultHandler = mrcudaSymNvidia;
+                __hasNativeGPU = 1;
             }
             else {    // rCUDA GPU
                 mrcudaGPUList[i].status = MRCUDA_GPU_STATUS_RCUDA;
@@ -356,7 +365,7 @@ void mrcuda_init()
         mrcuda_record_init();
 
         // Initialize mutex for switching locking.
-        pthread_mutex_init(&__processing_func_mutex, NULL);
+        pthread_mutex_init(&__switch_mutex, NULL);
 
         // Start listening on the specified socket path.
         /*if(mrcuda_comm_listen_for_signal(__sockPath, &mrcuda_switch) != 0)
@@ -375,20 +384,20 @@ int mrcuda_fini()
         // Close and free mrcudaSymRCUDA resources.
         if (mrcudaSymRCUDA) {
             if (mrcudaSymRCUDA->handler.symHandler)
-                dlclose(mrcudaSymRCUDA->handle.symHandler);
+                dlclose(mrcudaSymRCUDA->handler.symHandler);
             free(mrcudaSymRCUDA);
         }
 
         // Close and free mrcudaSymNvidia resources.
         if (mrcudaSymNvidia) {
-            if (mrcudaSymNvidia->handle.symHandler)
-                dlclose(mrcudaSymNvidia->handle.symHandler);
+            if (mrcudaSymNvidia->handler.symHandler)
+                dlclose(mrcudaSymNvidia->handler.symHandler);
             free(mrcudaSymNvidia);
         }
 
         mrcuda_record_fini();
 
-        pthread_mutex_destroy(&__processing_func_mutex);
+        pthread_mutex_destroy(&__switch_mutex);
 
         mrcudaState = MRCUDA_STATE_FINALIZED;
     }
@@ -449,8 +458,8 @@ void mrcuda_switch(MRCUDAGPU_t *mrcudaGPU, int toGPUNumber)
         }
 
         // Create a context to emulate rCUDA address space.
-        if (mrcudaGPU->realNumber != 0)
-            mrcudaGPU->defaultHandler->mrcudaCtxCreate(mrcudaGPU, toGPUNumber);
+        if (mrcudaGPU->realNumber != 0 && mrcuda_simulate_cuCtxCreate(mrcudaGPU, toGPUNumber) != 0)
+            REPORT_ERROR_AND_EXIT("Cannot simulate cuCtxCreate.\n");
         
         mrcudaGPU->realNumber = toGPUNumber;
         
@@ -461,7 +470,7 @@ void mrcuda_switch(MRCUDAGPU_t *mrcudaGPU, int toGPUNumber)
         // Replay recorded commands.
         record = mrcudaGPU->mrecordGPU->mrcudaRecordHeadPtr;
         while (record != NULL) {
-            if (!already_mock_stream && !(record->skip_mock_stream)) {
+            if (!already_mock_stream && !(record->skipMockStream)) {
                 mrcuda_simulate_stream(mrcudaGPU);
                 already_mock_stream = !already_mock_stream;
             }

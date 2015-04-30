@@ -13,22 +13,34 @@ void** __cudaRegisterFatBinary(void* fatCubin)
     void **ret;
     MRCUDAGPU_t *gpu;
     mrcuda_init();
-    mrcuda_function_call_lock();
     gpu = mrcuda_get_current_gpu();
+    mrcuda_function_call_lock(gpu);
     ret = gpu->defaultHandler->__mrcudaRegisterFatBinary(fatCubin);
-    if (mrcudaSymDefault == mrcudaSymRCUDA)
-        mrcuda_record_cudaRegisterFatBinary(fatCubin, ret);
-    mrcuda_function_call_release();
+    if (gpu->status == MRCUDA_GPU_STATUS_RCUDA)
+        mrcuda_record_cudaRegisterFatBinary(gpu, fatCubin, ret);
+    mrcuda_function_call_release(gpu);
     return ret;
 }
 
 /**
  * Interface of __cudaRegisterFunction.
  */
-void __cudaRegisterFunction(void **fatCubinHandle,const char *hostFun,char *deviceFun,const char *deviceName,int thread_limit,uint3 *tid,uint3 *bid,dim3 *bDim,dim3 *gDim,int *wSize)
+void __cudaRegisterFunction(
+    void **fatCubinHandle,
+    const char *hostFun,
+    char *deviceFun,
+    const char *deviceName,
+    int thread_limit,
+    uint3 *tid,
+    uint3 *bid,
+    dim3 *bDim,
+    dim3 *gDim,
+    int *wSize
+)
 {
-    mrcuda_function_call_lock();
-    mrcudaSymDefault->__mrcudaRegisterFunction(
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
+    mrcuda_function_call_lock(gpu);
+    gpu->defaultHandler->__mrcudaRegisterFunction(
         fatCubinHandle,
         hostFun,
         deviceFun,
@@ -40,8 +52,9 @@ void __cudaRegisterFunction(void **fatCubinHandle,const char *hostFun,char *devi
         gDim,
         wSize
     );
-    if(mrcudaSymDefault == mrcudaSymRCUDA)
+    if (gpu->status == MRCUDA_GPU_STATUS_RCUDA)
         mrcuda_record_cudaRegisterFunction(
+            gpu,
             fatCubinHandle,
             hostFun,
             deviceFun,
@@ -53,16 +66,26 @@ void __cudaRegisterFunction(void **fatCubinHandle,const char *hostFun,char *devi
             gDim,
             wSize
         );
-    mrcuda_function_call_release();
+    mrcuda_function_call_release(gpu);
 }
 
 /**
  * Interface of __cudaRegisterVar.
  */
-void __cudaRegisterVar(void **fatCubinHandle,char *hostVar,char *deviceAddress,const char *deviceName,int ext,int size,int constant,int global)
+void __cudaRegisterVar(
+    void **fatCubinHandle,
+    char *hostVar,
+    char *deviceAddress,
+    const char *deviceName,
+    int ext,
+    int size,
+    int constant,
+    int global
+)
 {
-    mrcuda_function_call_lock();
-    mrcudaSymDefault->__mrcudaRegisterVar(
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
+    mrcuda_function_call_lock(gpu);
+    gpu->defaultHandler->__mrcudaRegisterVar(
         fatCubinHandle,
         hostVar,
         deviceAddress,
@@ -72,8 +95,9 @@ void __cudaRegisterVar(void **fatCubinHandle,char *hostVar,char *deviceAddress,c
         constant,
         global
     );
-    if(mrcudaSymDefault == mrcudaSymRCUDA)
+    if (gpu->status == MRCUDA_GPU_STATUS_RCUDA)
         mrcuda_record_cudaRegisterVar(
+            gpu,
             fatCubinHandle,
             hostVar,
             deviceAddress,
@@ -83,16 +107,25 @@ void __cudaRegisterVar(void **fatCubinHandle,char *hostVar,char *deviceAddress,c
             constant,
             global
         );
-    mrcuda_function_call_release();
+    mrcuda_function_call_release(gpu);
 }
 
 /**
  * Interface of __cudaRegisterTexture.
  */
-void __cudaRegisterTexture(void **fatCubinHandle,const struct textureReference *hostVar,const void **deviceAddress,const char *deviceName,int dim,int norm,int ext)
+void __cudaRegisterTexture(
+    void **fatCubinHandle,
+    const struct textureReference *hostVar,
+    const void **deviceAddress,
+    const char *deviceName,
+    int dim,
+    int norm,
+    int ext
+)
 {
-    mrcuda_function_call_lock();
-    mrcudaSymDefault->__mrcudaRegisterTexture(
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
+    mrcuda_function_call_lock(gpu);
+    gpu->defaultHandler->__mrcudaRegisterTexture(
         fatCubinHandle,
         hostVar,
         deviceAddress,
@@ -101,8 +134,9 @@ void __cudaRegisterTexture(void **fatCubinHandle,const struct textureReference *
         norm,
         ext
     );
-    if(mrcudaSymDefault == mrcudaSymRCUDA)
+    if (gpu->status == MRCUDA_GPU_STATUS_RCUDA)
         mrcuda_record_cudaRegisterTexture(
+            gpu,
             fatCubinHandle,
             hostVar,
             deviceAddress,
@@ -111,7 +145,7 @@ void __cudaRegisterTexture(void **fatCubinHandle,const struct textureReference *
             norm,
             ext
         );
-    mrcuda_function_call_release();
+    mrcuda_function_call_release(gpu);
 }
 
 /**
@@ -135,8 +169,9 @@ extern __host__ cudaError_t CUDARTAPI cudaThreadSynchronize(void)
 {
     // cudaThreadSynchronize eventually calls cudaDeviceSynchronize.
     // Thus, locking cannot be done here since it will cause dead-lock.
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
-    ret = mrcudaSymDefault->mrcudaThreadSynchronize();
+    ret = gpu->defaultHandler->mrcudaThreadSynchronize();
     return ret;
 }
 
@@ -145,42 +180,48 @@ extern __host__ cudaError_t CUDARTAPI cudaThreadSynchronize(void)
  */
 extern __host__ cudaError_t CUDARTAPI cudaLaunch(const void *func)
 {
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
-    mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->mrcudaLaunch(func);
-    mrcuda_function_call_release();
-    if(mrcudaState == MRCUDA_STATE_RUNNING_RCUDA)
-    {
-        __cudaLaunchCount++;
-        if(mrcudaNumLaunchSwitchThreashold == __cudaLaunchCount)
-            mrcuda_switch();
-    }
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaLaunch(func);
+    mrcuda_function_call_release(gpu);
     return ret;
 }
 
 /**
  * Interface of cudaMemcpyToSymbol.
  */
-extern __host__ cudaError_t CUDARTAPI cudaMemcpyToSymbol(const void *symbol, const void *src, size_t count, size_t offset, enum cudaMemcpyKind kind)
+extern __host__ cudaError_t CUDARTAPI cudaMemcpyToSymbol(
+    const void *symbol, 
+    const void *src, 
+    size_t count, 
+    size_t offset, 
+    enum cudaMemcpyKind kind
+)
 {
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
-    mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->mrcudaMemcpyToSymbol(symbol, src, count, offset, kind);
-    __cudaMemcpyToSymbolSizeTotal += count;
-    mrcuda_function_call_release();
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaMemcpyToSymbol(symbol, src, count, offset, kind);
+    mrcuda_function_call_release(gpu);
     return ret;
 }
 
 /**
  * Interface of cudaMemcpy.
  */
-extern __host__ cudaError_t CUDARTAPI cudaMemcpy(void *dst, const void *src, size_t count, enum cudaMemcpyKind kind)
+extern __host__ cudaError_t CUDARTAPI cudaMemcpy(
+    void *dst, 
+    const void *src, 
+    size_t count, 
+    enum cudaMemcpyKind kind
+)
 {
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
-    mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->mrcudaMemcpy(dst, src, count, kind);
-    __cudaMemcpySizeTotal += count;
-    mrcuda_function_call_release();
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaMemcpy(dst, src, count, kind);
+    mrcuda_function_call_release(gpu);
     return ret;
 }
 
@@ -189,14 +230,15 @@ extern __host__ cudaError_t CUDARTAPI cudaMemcpy(void *dst, const void *src, siz
  */
 extern __host__ cudaError_t CUDARTAPI cudaHostAlloc(void **pHost, size_t size, unsigned int flags)
 {
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
     void *pHost1;
-    mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->mrcudaHostAlloc(pHost, size, flags);
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaHostAlloc(pHost, size, flags);
     // This function has to be recorded regardless of rCUDA are being executed or not.
     // This ensures that we calls cudaFreeHost using the right library (rCUDA or native).
-    mrcuda_record_cudaHostAlloc(pHost, size, flags);
-    mrcuda_function_call_release();
+    mrcuda_record_cudaHostAlloc(gpu, pHost, size, flags);
+    mrcuda_function_call_release(gpu);
     return ret;
 }
 
@@ -205,10 +247,11 @@ extern __host__ cudaError_t CUDARTAPI cudaHostAlloc(void **pHost, size_t size, u
  */
 extern __host__ cudaError_t CUDARTAPI cudaMemset(void *devPtr, int value, size_t count)
 {
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
-    mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->mrcudaMemset(devPtr, value, count);
-    mrcuda_function_call_release();
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaMemset(devPtr, value, count);
+    mrcuda_function_call_release(gpu);
     return ret;
 }
 
@@ -217,11 +260,12 @@ extern __host__ cudaError_t CUDARTAPI cudaMemset(void *devPtr, int value, size_t
  */
 extern __host__ cudaError_t CUDARTAPI cudaFreeHost(void *ptr)
 {
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
-    mrcuda_function_call_lock();
+    mrcuda_function_call_lock(gpu);
     // Call the right library of cudaFreeHost according to the recorded cudaHostAlloc calls.
-    mrcuda_replay_cudaFreeHost(ptr)->mrcudaFreeHost(ptr);
-    mrcuda_function_call_release();
+    mrcuda_replay_cudaFreeHost(gpu, ptr)->mrcudaFreeHost(ptr);
+    mrcuda_function_call_release(gpu);
     return ret;
 }
 
@@ -230,10 +274,11 @@ extern __host__ cudaError_t CUDARTAPI cudaFreeHost(void *ptr)
  */
 extern __host__ cudaError_t CUDARTAPI cudaSetupArgument(const void *arg, size_t size, size_t offset)
 {
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
-    mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->mrcudaSetupArgument(arg, size, offset);
-    mrcuda_function_call_release();
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaSetupArgument(arg, size, offset);
+    mrcuda_function_call_release(gpu);
     return ret;
 }
 
@@ -242,12 +287,13 @@ extern __host__ cudaError_t CUDARTAPI cudaSetupArgument(const void *arg, size_t 
  */
 extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaMalloc(void **devPtr, size_t size)
 {
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
-    mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->mrcudaMalloc(devPtr, size);
-    if(mrcudaSymDefault == mrcudaSymRCUDA)
-        mrcuda_record_cudaMalloc(devPtr, size);
-    mrcuda_function_call_release();
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaMalloc(devPtr, size);
+    if (gpu->status == MRCUDA_GPU_STATUS_RCUDA)
+        mrcuda_record_cudaMalloc(gpu, devPtr, size);
+    mrcuda_function_call_release(gpu);
     return ret;
 }
 
@@ -256,24 +302,31 @@ extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaMalloc(void **devPt
  */
 extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaFree(void *devPtr)
 {
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
-    mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->mrcudaFree(devPtr);
-    if(mrcudaSymDefault == mrcudaSymRCUDA)
-        mrcuda_record_cudaFree(devPtr);
-    mrcuda_function_call_release();
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaFree(devPtr);
+    if (gpu->status == MRCUDA_GPU_STATUS_RCUDA)
+        mrcuda_record_cudaFree(gpu, devPtr);
+    mrcuda_function_call_release(gpu);
     return ret;
 }
 
 /**
  * Interface of cudaConfigureCall.
  */
-extern __host__ cudaError_t CUDARTAPI cudaConfigureCall(dim3 gridDim, dim3 blockDim, size_t sharedMem, cudaStream_t stream)
+extern __host__ cudaError_t CUDARTAPI cudaConfigureCall(
+    dim3 gridDim, 
+    dim3 blockDim, 
+    size_t sharedMem, 
+    cudaStream_t stream
+)
 {
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
-    mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->mrcudaConfigureCall(gridDim, blockDim, sharedMem, stream);
-    mrcuda_function_call_release();
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaConfigureCall(gridDim, blockDim, sharedMem, stream);
+    mrcuda_function_call_release(gpu);
     return ret;
 }
 
@@ -282,48 +335,67 @@ extern __host__ cudaError_t CUDARTAPI cudaConfigureCall(dim3 gridDim, dim3 block
  */
 extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaGetLastError(void)
 {
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
-    mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->mrcudaGetLastError();
-    mrcuda_function_call_release();
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaGetLastError();
+    mrcuda_function_call_release(gpu);
     return ret;
 }
 
 /**
  * Interface of cudaBindTexture.
  */
-extern __host__ cudaError_t CUDARTAPI cudaBindTexture(size_t *offset, const struct textureReference *texref, const void *devPtr, const struct cudaChannelFormatDesc *desc, size_t size)
+extern __host__ cudaError_t CUDARTAPI cudaBindTexture(
+    size_t *offset, 
+    const struct textureReference *texref, 
+    const void *devPtr, 
+    const struct cudaChannelFormatDesc *desc, 
+    size_t size
+)
 {
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
-    mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->mrcudaBindTexture(offset, texref, devPtr, desc, size);
-    if(mrcudaSymDefault == mrcudaSymRCUDA)
-        mrcuda_record_cudaBindTexture(offset, texref, devPtr, desc, size);
-    mrcuda_function_call_release();
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaBindTexture(offset, texref, devPtr, desc, size);
+    if (gpu->status == MRCUDA_GPU_STATUS_RCUDA)
+        mrcuda_record_cudaBindTexture(gpu, offset, texref, devPtr, desc, size);
+    mrcuda_function_call_release(gpu);
     return ret;
 }
 
 /**
  * Interface of cudaCreateChannelDesc.
  */
-extern __host__ struct cudaChannelFormatDesc CUDARTAPI cudaCreateChannelDesc(int x, int y, int z, int w, enum cudaChannelFormatKind f)
+extern __host__ struct cudaChannelFormatDesc CUDARTAPI cudaCreateChannelDesc(
+    int x, 
+    int y, 
+    int z, 
+    int w, 
+    enum cudaChannelFormatKind f
+)
 {
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     struct cudaChannelFormatDesc ret;
-    mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->mrcudaCreateChannelDesc(x, y, z, w, f);
-    mrcuda_function_call_release();
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaCreateChannelDesc(x, y, z, w, f);
+    mrcuda_function_call_release(gpu);
     return ret;
 }
 
 /**
  * Interface of cudaGetDeviceProperties.
  */
-extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaGetDeviceProperties(struct cudaDeviceProp *prop, int device)
+extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaGetDeviceProperties(
+    struct cudaDeviceProp *prop, 
+    int device
+)
 {
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
-    mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->mrcudaGetDeviceProperties(prop, device);
-    mrcuda_function_call_release();
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaGetDeviceProperties(prop, device);
+    mrcuda_function_call_release(gpu);
     return ret;
 }
 
@@ -332,13 +404,13 @@ extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaGetDeviceProperties
  */
 extern __host__ cudaError_t CUDARTAPI cudaStreamCreate(cudaStream_t *pStream)
 {
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
-    mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->mrcudaStreamCreate(pStream);
-    if(mrcudaSymDefault == mrcudaSymRCUDA)
-        mrcuda_record_cudaStreamCreate(pStream);
-    ret = cudaSuccess;
-    mrcuda_function_call_release();
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaStreamCreate(pStream);
+    if (gpu->status == MRCUDA_GPU_STATUS_RCUDA)
+        mrcuda_record_cudaStreamCreate(gpu, pStream);
+    mrcuda_function_call_release(gpu);
     return ret;
 }
 
@@ -347,10 +419,11 @@ extern __host__ cudaError_t CUDARTAPI cudaStreamCreate(cudaStream_t *pStream)
  */
 extern __host__ cudaError_t CUDARTAPI cudaMemGetInfo(size_t *free, size_t *total)
 {
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
-    mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->mrcudaMemGetInfo(free, total);
-    mrcuda_function_call_release();
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaMemGetInfo(free, total);
+    mrcuda_function_call_release(gpu);
     return ret;
 }
 
@@ -359,10 +432,11 @@ extern __host__ cudaError_t CUDARTAPI cudaMemGetInfo(size_t *free, size_t *total
  */
 extern __host__ cudaError_t CUDARTAPI cudaSetDevice(int device)
 {
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
-    mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->mrcudaSetDevice(device);
-    mrcuda_function_call_release();
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaSetDevice(device);
+    mrcuda_function_call_release(gpu);
     return ret;
 }
 
@@ -371,12 +445,13 @@ extern __host__ cudaError_t CUDARTAPI cudaSetDevice(int device)
  */
 extern __host__ cudaError_t CUDARTAPI cudaSetDeviceFlags( unsigned int flags )
 {
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
-    mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->mrcudaSetDeviceFlags(flags);
-    if(mrcudaSymDefault == mrcudaSymRCUDA)
-        mrcuda_record_cudaSetDeviceFlags(flags);
-    mrcuda_function_call_release();
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaSetDeviceFlags(flags);
+    if (gpu->status == MRCUDA_GPU_STATUS_RCUDA)
+        mrcuda_record_cudaSetDeviceFlags(gpu, flags);
+    mrcuda_function_call_release(gpu);
     return ret;
 }
 
@@ -385,10 +460,11 @@ extern __host__ cudaError_t CUDARTAPI cudaSetDeviceFlags( unsigned int flags )
  */
 extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaGetDevice(int *device)
 {
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
-    mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->mrcudaGetDevice(device);
-    mrcuda_function_call_release();
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaGetDevice(device);
+    mrcuda_function_call_release(gpu);
     return ret;
 }
 
@@ -397,19 +473,21 @@ extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaGetDevice(int *devi
  */
 extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaGetDeviceCount(int *count)
 {
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
-    mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->mrcudaGetDeviceCount(count);
-    mrcuda_function_call_release();
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaGetDeviceCount(count);
+    mrcuda_function_call_release(gpu);
     return ret;
 }
 
 cudaError_t cudaDeviceSynchronize(void)
 {
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
-    mrcuda_function_call_lock();
-    ret = mrcudaSymDefault->mrcudaDeviceSynchronize();
-    mrcuda_function_call_release();
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaDeviceSynchronize();
+    mrcuda_function_call_release(gpu);
     return ret;
 }
 

@@ -3,6 +3,8 @@
 #include <string.h>
 #include <glib.h>
 #include <assert.h>
+#include <cuda.h>
+#include <cuda_runtime.h>
 
 // For manual profiling
 #include <sys/time.h>
@@ -64,7 +66,7 @@ void mrcuda_record_init()
 
     for (i = 0; i < mrcudaNumGPUs; i++) {
         if (mrcudaGPUList[i].status == MRCUDA_GPU_STATUS_RCUDA) {
-            mrecordGPUList[i].mrcudaGPU = mrcudaGPUList[i];
+            mrecordGPUList[i].mrcudaGPU = &(mrcudaGPUList[i]);
             mrecordGPUList[i].activeMemoryTable = g_hash_table_new(g_direct_hash, g_direct_equal);
             if(mrecordGPUList[i].activeMemoryTable == NULL)
                 REPORT_ERROR_AND_EXIT("Cannot allocate memory for activeMemoryTable of GPU #%d.\n", i);
@@ -116,7 +118,7 @@ void mrcuda_record_cudaRegisterFatBinary(MRCUDAGPU_t *mrcudaGPU, void* fatCubin,
     __mrcuda_record_new_safe(&recordPtr, mrcudaGPU);
 
     recordPtr->functionName = "__cudaRegisterFatBinary";
-    recordPtr->skip_mock_stream = 1;
+    recordPtr->skipMockStream = 1;
     recordPtr->data.cudaRegisterFatBinary.fatCubin = fatCubin;
     recordPtr->data.cudaRegisterFatBinary.fatCubinHandle = fatCubinHandle;
     recordPtr->replayFunc = &mrcuda_replay_cudaRegisterFatBinary;
@@ -150,17 +152,17 @@ void mrcuda_record_cudaRegisterFunction(
         REPORT_ERROR_AND_EXIT("Cannot find the address of the specified fatCubinHandle.\n");
 
     recordPtr->functionName = "__cudaRegisterFunction";
-    recordPtr->skip_mock_stream = 1;
-    recordPtr->data.cudaRegisterFunction.fatCubinHandle = fatCubinHandleAddr;
-    recordPtr->data.cudaRegisterFunction.hostFun = hostFun;
-    recordPtr->data.cudaRegisterFunction.deviceFun = deviceFun;
-    recordPtr->data.cudaRegisterFunction.deviceName = deviceName;
+    recordPtr->skipMockStream = 1;
+    recordPtr->data.cudaRegisterFunction.fatCubinHandlePtr = fatCubinHandleAddr;
+    recordPtr->data.cudaRegisterFunction.hostFun.ptr = hostFun;
+    recordPtr->data.cudaRegisterFunction.deviceFun.ptr = deviceFun;
+    recordPtr->data.cudaRegisterFunction.deviceName.ptr = deviceName;
     recordPtr->data.cudaRegisterFunction.thread_limit = thread_limit;
-    recordPtr->data.cudaRegisterFunction.tid = tid;
-    recordPtr->data.cudaRegisterFunction.bid = bid;
-    recordPtr->data.cudaRegisterFunction.bDim = bDim;
-    recordPtr->data.cudaRegisterFunction.gDim = gDim;
-    recordPtr->data.cudaRegisterFunction.wSize = wSize;
+    recordPtr->data.cudaRegisterFunction.tid = *tid;
+    recordPtr->data.cudaRegisterFunction.bid = *bid;
+    recordPtr->data.cudaRegisterFunction.bDim = *bDim;
+    recordPtr->data.cudaRegisterFunction.gDim = *gDim;
+    recordPtr->data.cudaRegisterFunction.wSize = *wSize;
     recordPtr->replayFunc = &mrcuda_replay_cudaRegisterFunction;
 }
 
@@ -188,11 +190,11 @@ void mrcuda_record_cudaRegisterVar(
         REPORT_ERROR_AND_EXIT("Cannot find the address of the specified fatCubinHandle.\n");
 
     recordPtr->functionName = "__cudaRegisterVar";
-    recordPtr->skip_mock_stream = 1;
-    recordPtr->data.cudaRegisterVar.fatCubinHandle = fatCubinHandleAddr;
-    recordPtr->data.cudaRegisterVar.hostVar = hostVar;
-    recordPtr->data.cudaRegisterVar.deviceAddress = deviceAddress;
-    recordPtr->data.cudaRegisterVar.deviceName = deviceName;
+    recordPtr->skipMockStream = 1;
+    recordPtr->data.cudaRegisterVar.fatCubinHandlePtr = fatCubinHandleAddr;
+    recordPtr->data.cudaRegisterVar.hostVar.ptr = hostVar;
+    recordPtr->data.cudaRegisterVar.deviceAddress.ptr = deviceAddress;
+    recordPtr->data.cudaRegisterVar.deviceName.ptr = deviceName;
     recordPtr->data.cudaRegisterVar.ext = ext;
     recordPtr->data.cudaRegisterVar.size = size;
     recordPtr->data.cudaRegisterVar.constant = constant;
@@ -225,11 +227,11 @@ void mrcuda_record_cudaRegisterTexture(
         REPORT_ERROR_AND_EXIT("Cannot find the address of the specified fatCubinHandle.\n");
 
     recordPtr->functionName = "__cudaRegisterTexture";
-    recordPtr->skip_mock_stream = 1;
-    recordPtr->data.cudaRegisterTexture.fatCubinHandle = fatCubinHandleAddr;
-    recordPtr->data.cudaRegisterTexture.hostVar = hostVar;
+    recordPtr->skipMockStream = 1;
+    recordPtr->data.cudaRegisterTexture.fatCubinHandlePtr = fatCubinHandleAddr;
+    recordPtr->data.cudaRegisterTexture.hostVar.ptr = hostVar;
     recordPtr->data.cudaRegisterTexture.deviceAddress = deviceAddress;
-    recordPtr->data.cudaRegisterTexture.deviceName = deviceName;
+    recordPtr->data.cudaRegisterTexture.deviceName.ptr = deviceName;
     recordPtr->data.cudaRegisterTexture.dim = dim;
     recordPtr->data.cudaRegisterTexture.norm = norm;
     recordPtr->data.cudaRegisterTexture.ext = ext;
@@ -264,7 +266,7 @@ void mrcuda_record_cudaMalloc(MRCUDAGPU_t *mrcudaGPU, void **devPtr, size_t size
     __mrcuda_record_new_safe(&recordPtr, mrcudaGPU);
     
     recordPtr->functionName = "cudaMalloc";
-    recordPtr->skip_mock_stream = 0;
+    recordPtr->skipMockStream = 0;
     recordPtr->data.cudaMalloc.devPtr = *devPtr;
     recordPtr->data.cudaMalloc.size = size;
     recordPtr->replayFunc = &mrcuda_replay_cudaMalloc;
@@ -282,7 +284,7 @@ void mrcuda_record_cudaFree(MRCUDAGPU_t *mrcudaGPU, void *devPtr)
     __mrcuda_record_new_safe(&recordPtr, mrcudaGPU);
 
     recordPtr->functionName = "cudaFree";
-    recordPtr->skip_mock_stream = 0;
+    recordPtr->skipMockStream = 0;
     recordPtr->data.cudaFree.devPtr = devPtr;
     recordPtr->replayFunc = &mrcuda_replay_cudaFree;
 
@@ -306,7 +308,7 @@ void mrcuda_record_cudaBindTexture(
     __mrcuda_record_new_safe(&recordPtr, mrcudaGPU);
 
     recordPtr->functionName = "cudaBindTexture";
-    recordPtr->skip_mock_stream = 0;
+    recordPtr->skipMockStream = 0;
     if(offset == NULL)
         recordPtr->data.cudaBindTexture.offset = 0;
     else
@@ -328,7 +330,7 @@ void mrcuda_record_cudaStreamCreate(MRCUDAGPU_t *mrcudaGPU, cudaStream_t *pStrea
     __mrcuda_record_new_safe(&recordPtr, mrcudaGPU);
 
     recordPtr->functionName = "cudaStreamCreate";
-    recordPtr->skip_mock_stream = 0;
+    recordPtr->skipMockStream = 0;
     recordPtr->data.cudaStreamCreate.pStream = pStream;
     recordPtr->replayFunc = &mrcuda_replay_cudaStreamCreate;
 }
@@ -339,20 +341,20 @@ void mrcuda_record_cudaStreamCreate(MRCUDAGPU_t *mrcudaGPU, cudaStream_t *pStrea
  */
 void mrcuda_record_cudaHostAlloc(MRCUDAGPU_t *mrcudaGPU, void **pHost, size_t size, unsigned int flags)
 {
-    g_hash_table_insert(mrcudaGPU->mrecordGPU->hostAllocTable, *pHost, mrcudaSymDefault);
+    g_hash_table_insert(mrcudaGPU->mrecordGPU->hostAllocTable, *pHost, mrcudaGPU->defaultHandler);
 }
 
 /**
  * Record a cudaSetDeviceFlags call.
  */
-void mrcuda_record_cudaSetDeviceFlags(MRCUDAGPU_t, *mrcudaGPU, unsigned int flags)
+void mrcuda_record_cudaSetDeviceFlags(MRCUDAGPU_t *mrcudaGPU, unsigned int flags)
 {
     MRecord_t *recordPtr;
 
     __mrcuda_record_new_safe(&recordPtr, mrcudaGPU);
 
     recordPtr->functionName = "cudaSetDeviceFlags";
-    recordPtr->skip_mock_stream = 1;
+    recordPtr->skipMockStream = 1;
     recordPtr->data.cudaSetDeviceFlags.flags = flags;
     recordPtr->replayFunc = &mrcuda_replay_cudaSetDeviceFlags;
 }
@@ -380,18 +382,34 @@ void mrcuda_replay_cudaRegisterFatBinary(MRCUDAGPU_t *mrcudaGPU, MRecord_t *reco
  */
 void mrcuda_replay_cudaRegisterFunction(MRCUDAGPU_t *mrcudaGPU, MRecord_t *record)
 {
+    uint3 tid, bid;
+    dim3 bDim, gDim;
+    int wSize;
     mrcudaGPU->defaultHandler->__mrcudaRegisterFunction(
-        *(record->data.cudaRegisterFunction.fatCubinHandle),
-        record->data.cudaRegisterFunction.hostFun,
-        record->data.cudaRegisterFunction.deviceFun,
-        record->data.cudaRegisterFunction.deviceName,
+        *(record->data.cudaRegisterFunction.fatCubinHandlePtr),
+        record->data.cudaRegisterFunction.hostFun.ptr,
+        record->data.cudaRegisterFunction.deviceFun.ptr,
+        record->data.cudaRegisterFunction.deviceName.ptr,
         record->data.cudaRegisterFunction.thread_limit,
-        record->data.cudaRegisterFunction.tid,
-        record->data.cudaRegisterFunction.bid,
-        record->data.cudaRegisterFunction.bDim,
-        record->data.cudaRegisterFunction.gDim,
-        record->data.cudaRegisterFunction.wSize
+        &tid,
+        &bid,
+        &bDim,
+        &gDim,
+        &wSize
     );
+    assert(record->data.cudaRegisterFunction.tid.x == tid.x);
+    assert(record->data.cudaRegisterFunction.tid.y == tid.y);
+    assert(record->data.cudaRegisterFunction.tid.z == tid.z);
+    assert(record->data.cudaRegisterFunction.bid.x == bid.x);
+    assert(record->data.cudaRegisterFunction.bid.y == bid.y);
+    assert(record->data.cudaRegisterFunction.bid.z == bid.z);
+    assert(record->data.cudaRegisterFunction.bDim.x == bDim.x);
+    assert(record->data.cudaRegisterFunction.bDim.y == bDim.y);
+    assert(record->data.cudaRegisterFunction.bDim.z == bDim.z);
+    assert(record->data.cudaRegisterFunction.gDim.x == gDim.x);
+    assert(record->data.cudaRegisterFunction.gDim.y == gDim.y);
+    assert(record->data.cudaRegisterFunction.gDim.z == gDim.z);
+    assert(record->data.cudaRegisterFunction.wSize == wSize);
 }
 
 /**
@@ -401,9 +419,9 @@ void mrcuda_replay_cudaRegisterVar(MRCUDAGPU_t *mrcudaGPU, MRecord_t *record)
 {
     mrcudaGPU->defaultHandler->__mrcudaRegisterVar(
         *(record->data.cudaRegisterVar.fatCubinHandle),
-        record->data.cudaRegisterVar.hostVar,
-        record->data.cudaRegisterVar.deviceAddress,
-        record->data.cudaRegisterVar.deviceName,
+        record->data.cudaRegisterVar.hostVar.ptr,
+        record->data.cudaRegisterVar.deviceAddress.ptr,
+        record->data.cudaRegisterVar.deviceName.ptr,
         record->data.cudaRegisterVar.ext,
         record->data.cudaRegisterVar.size,
         record->data.cudaRegisterVar.constant,
@@ -418,9 +436,9 @@ void mrcuda_replay_cudaRegisterTexture(MRCUDAGPU_t *mrcudaGPU, MRecord_t *record
 {
     mrcudaGPU->defaultHandler->__mrcudaRegisterTexture(
         *(record->data.cudaRegisterTexture.fatCubinHandle),
-        record->data.cudaRegisterTexture.hostVar,
+        record->data.cudaRegisterTexture.hostVar.ptr,
         record->data.cudaRegisterTexture.deviceAddress,
-        record->data.cudaRegisterTexture.deviceName,
+        record->data.cudaRegisterTexture.deviceName.ptr,
         record->data.cudaRegisterTexture.dim,
         record->data.cudaRegisterTexture.norm,
         record->data.cudaRegisterTexture.ext
@@ -492,11 +510,11 @@ void mrcuda_replay_cudaStreamCreate(MRCUDAGPU_t *mrcudaGPU, MRecord_t *record)
  * This function looks for the library used for allocating the ptr.
  * The dual function of this call is mrcuda_record_cudaHostAlloc.
  */
-MRCUDASym* mrcuda_replay_cudaFreeHost(MRCUDAGPU_t *mrcudaGPU, void *ptr)
+MRCUDASym_t *mrcuda_replay_cudaFreeHost(MRCUDAGPU_t *mrcudaGPU, void *ptr)
 {
     MRCUDASym_t *calledLib = NULL;
-    if((calledLib = g_hash_table_lookup(__hostAllocTable, ptr)) != NULL)
-        g_hash_table_remove(__hostAllocTable, ptr);
+    if ((calledLib = g_hash_table_lookup(mrcudaGPU->mrecordGPU->hostAllocTable, ptr)) != NULL)
+        g_hash_table_remove(mrcudaGPU->mrecordGPU->hostAllocTable, ptr);
     else
         calledLib = mrcudaGPU->defaultHandler;
     return calledLib;
@@ -610,10 +628,10 @@ gboolean __sync_symbol_instance(gpointer key, gpointer value, gpointer user_data
                 REPORT_ERROR_AND_EXIT("Cannot allocate the variable cache for __sync_symbol_instance.\n");
             break;
         case MRCUDA_GPU_STATUS_HELPER:
-            if ((sharedMemInfo = mhelper_mem_malloc(record->data.cudaRegisterVar.size + strlen(record->data.cudaRegisterVar.hostVar) + 1)) == NULL)
+            if ((sharedMemInfo = mhelper_mem_malloc(record->data.cudaRegisterVar.size + strlen(record->data.cudaRegisterVar.hostVar.ptr) + 1)) == NULL)
                 REPORT_ERROR_AND_EXIT("Cannot allocate the variable cache on shared mem for __sync_symbol_instance.\n");
             dst = sharedMemInfo->startAddr;
-            strcpy(dst + record->data.cudaRegisterVar.size, record->data.cudaRegisterVar.hostVar);
+            strcpy(dst + record->data.cudaRegisterVar.size, record->data.cudaRegisterVar.hostVar.ptr);
             break;
         default:
             REPORT_ERROR_AND_EXIT("Cannot perform __sync_symbol_instance back to rCUDA.\n");
@@ -621,7 +639,7 @@ gboolean __sync_symbol_instance(gpointer key, gpointer value, gpointer user_data
     
     if ((error = mrcudaSymRCUDA->mrcudaMemcpyFromSymbol(
         dst, 
-        record->data.cudaRegisterVar.hostVar, 
+        record->data.cudaRegisterVar.hostVar.ptr, 
         record->data.cudaRegisterVar.size,
         0,
         cudaMemcpyDeviceToHost
@@ -631,7 +649,7 @@ gboolean __sync_symbol_instance(gpointer key, gpointer value, gpointer user_data
     switch (mrcudaGPU->status) {
         case MRCUDA_GPU_STATUS_NATIVE:
             if (mrcudaGPU->defaultHandler->mrcudaMemcpyToSymbol(
-                record->data.cudaRegisterVar.hostVar,
+                record->data.cudaRegisterVar.hostVar.ptr,
                 dst,
                 record->data.cudaRegisterVar.size,
                 0,
@@ -667,13 +685,13 @@ gboolean __sync_symbol_instance(gpointer key, gpointer value, gpointer user_data
 void mrcuda_sync_mem(MRCUDAGPU_t *mrcudaGPU)
 {
     g_hash_table_foreach_remove(
-        __activeMemoryTable,
+        mrcudaGPU->mrecordGPU->activeMemoryTable,
         &__sync_mem_instance,
         mrcudaGPU
     );
 
     g_hash_table_foreach_remove(
-        __activeSymbolTable,
+        mrcudaGPU->mrecordGPU->activeSymbolTable,
         &__sync_symbol_instance,
         mrcudaGPU
     );
@@ -691,5 +709,21 @@ void mrcuda_simulate_stream(MRCUDAGPU_t *mrcudaGPU)
         REPORT_ERROR_AND_EXIT("Cannot simulate a cuda stream on the native CUDA.\n");
     if (mrcudaGPU->defaultHandler->mrcudaStreamCreate(&stream) != cudaSuccess)
         REPORT_ERROR_AND_EXIT("Cannot simulate a cuda stream on the native CUDA.\n");
+}
+
+/**
+ * Simulate cuCtxCreate on the specified gpuID.
+ * If mrcudaGPU->status == MRCUDA_GPU_STATUS_HELPER, ask the helper to handle the command.
+ * @param mrcudaGPU a ptr to a MRCUDAGPU_t.
+ * @param gpuID the ID of the GPU a context will be created on.
+ * @return 0 on success; -1 otherwise.
+ */
+int mrcuda_simulate_cuCtxCreate(MRCUDAGPU_t *mrcudaGPU, int gpuID)
+{
+    CUcontext pctx;
+
+    if (mrcudaGPU->status == MRCUDA_GPU_STATUS_HELPER)
+        return mhelper_int_cuCtxCreate_internal(mrcudaGPU);
+    return cuCtxCreate(&pctx, CU_CTX_SCHED_AUTO, gpuID) == CUDA_SUCCESS ? 0 : -1;
 }
 

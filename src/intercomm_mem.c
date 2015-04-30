@@ -2,7 +2,10 @@
 #include <sys/ipc.h>
 #include <sys/types.h>
 #include <stdlib.h>
+#include <stdio.h>
 
+#include "common.h"
+#include "datatypes.h"
 #include "intercomm_mem.h"
 
 #define DEV_RANDOM "/dev/urandom"
@@ -17,10 +20,16 @@ static key_t generate_key()
 {
     FILE *f;
     unsigned int seed;
+	size_t remainingSize = sizeof(unsigned int);
+	size_t readSize = 0;
 
     if (!initRand) {
         f = fopen(DEV_RANDOM, "r");
-        fread(&seed, sizeof(unsigned int), 1, f);
+		while (remainingSize > 0) {
+			if ((readSize = fread(&seed, remainingSize, 1, f)) == 0)
+				REPORT_ERROR_AND_EXIT("Cannot read from " DEV_RANDOM ".\n");
+			remainingSize -= readSize;
+		}
         fclose(f);
         srand(seed);
         initRand = !initRand;
@@ -39,9 +48,9 @@ MRCUDASharedMemLocalInfo_t *mhelper_mem_malloc(size_t size)
     if (sharedMemInfo == NULL)
         goto __mhelper_mem_malloc_err_0;
     sharedMemInfo->sharedMem.key = generate_key();
-    if ((sharedMemInfo->shmid = shmget(*key, size, IPC_CREAT | IPC_EXCL | 0600)) <= 0)
+    if ((sharedMemInfo->shmid = shmget(sharedMemInfo->sharedMem.key, size, IPC_CREAT | IPC_EXCL | 0600)) <= 0)
         goto __mhelper_mem_malloc_err_1;
-    if ((sharedMemInfo->startAddr = shmat(shmid, NULL, 0)) == NULL)
+    if ((sharedMemInfo->startAddr = shmat(sharedMemInfo->shmid, NULL, 0)) == NULL)
         goto __mhelper_mem_malloc_err_2;
     sharedMemInfo->sharedMem.size = size;
     return sharedMemInfo;
@@ -79,7 +88,7 @@ MRCUDASharedMemLocalInfo_t *mhelper_mem_get(MRCUDASharedMem_t sharedMem)
         goto __mhelper_mem_get_err_0;
     if ((sharedMemInfo->shmid = shmget(sharedMem.key, sharedMem.size, 0666)) <= 0)
         goto __mhelper_mem_get_err_1;
-    if ((sharedMemInfo->startAddr = shmat(shmid, NULL, 0)) == NULL)
+    if ((sharedMemInfo->startAddr = shmat(sharedMemInfo->shmid, NULL, 0)) == NULL)
         goto __mhelper_mem_get_err_1;
     sharedMemInfo->sharedMem = sharedMem;
     return sharedMemInfo;
