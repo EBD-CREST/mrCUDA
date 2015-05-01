@@ -3,8 +3,6 @@
 #include "datatypes.h"
 #include "record.h"
 
-static long int __cudaLaunchCount = 0;
-
 /**
  * Interface of __cudaRegisterFatBinary.
  */
@@ -184,7 +182,10 @@ extern __host__ cudaError_t CUDARTAPI cudaLaunch(const void *func)
     cudaError_t ret;
     mrcuda_function_call_lock(gpu);
     ret = gpu->defaultHandler->mrcudaLaunch(func);
+    gpu->cudaLaunchCount++;
     mrcuda_function_call_release(gpu);
+    if (gpu->switchThreshold == gpu->cudaLaunchCount)
+        mrcuda_switch(gpu, gpu->virtualNumber);
     return ret;
 }
 

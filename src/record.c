@@ -403,7 +403,7 @@ void mrcuda_replay_cudaRegisterFunction(MRCUDAGPU_t *mrcudaGPU, MRecord_t *recor
 void mrcuda_replay_cudaRegisterVar(MRCUDAGPU_t *mrcudaGPU, MRecord_t *record)
 {
     mrcudaGPU->defaultHandler->__mrcudaRegisterVar(
-        *(record->data.cudaRegisterVar.fatCubinHandle),
+        *(record->data.cudaRegisterVar.fatCubinHandlePtr),
         record->data.cudaRegisterVar.hostVar.ptr,
         record->data.cudaRegisterVar.deviceAddress.ptr,
         record->data.cudaRegisterVar.deviceName.ptr,
@@ -420,7 +420,7 @@ void mrcuda_replay_cudaRegisterVar(MRCUDAGPU_t *mrcudaGPU, MRecord_t *record)
 void mrcuda_replay_cudaRegisterTexture(MRCUDAGPU_t *mrcudaGPU, MRecord_t *record)
 {
     mrcudaGPU->defaultHandler->__mrcudaRegisterTexture(
-        *(record->data.cudaRegisterTexture.fatCubinHandle),
+        *(record->data.cudaRegisterTexture.fatCubinHandlePtr),
         record->data.cudaRegisterTexture.hostVar.ptr,
         record->data.cudaRegisterTexture.deviceAddress,
         record->data.cudaRegisterTexture.deviceName.ptr,

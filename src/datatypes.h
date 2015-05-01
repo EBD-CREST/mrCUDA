@@ -408,6 +408,8 @@ struct MRCUDAGPU_t {
     int virtualNumber;
     int realNumber;
     int nativeFromStart;
+    int switchThreshold;
+    int cudaLaunchCount;
     MRCUDAGPUStatus_e status;
     pthread_mutex_t mutex;
     MRCUDASym_t *defaultHandler;

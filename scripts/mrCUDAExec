@@ -86,7 +86,6 @@ def main(options, args):
     environment['RCUDA_DEVICE_COUNT'] = str(options.number_of_devices)
     environment['MRCUDA_NVIDIA_LIB_PATH'] = options.nvidia_libcudart
     environment['MRCUDA_RCUDA_LIB_PATH'] = options.rcuda_libcudart
-    environment['MRCUDA_SWITCH_THRESHOLD'] = options.switch_threshold
     environment['MRCUDA_SOCK_PATH'] = options.sock_path
     environment['MHELPER_PATH'] = options.mhelper_path
 
@@ -94,6 +93,7 @@ def main(options, args):
     if options.server_address:
         while i < options.number_of_devices:
             environment['RCUDA_DEVICE_' + str(i)] = options.server_address + '@' + str(options.port) + ':' + str(i)
+            environment['MRCUDA_SWITCH_THRESHOLD_' + str(i)] = options.switch_threshold
             i += 1
     else:
         f = open(options.server_file, 'r')
@@ -106,7 +106,11 @@ def main(options, args):
 
         j = 0
         while i < options.number_of_devices:
-            environment['RCUDA_DEVICE_' + str(i)] = server_lists[j]
+            server_info = server_lists[j].split('|')
+            if len(server_info) != 2:
+                raise Exception('Server file is not well-formed.')
+            environment['RCUDA_DEVICE_' + str(i)] = server_info[0]
+            environment['MRCUDA_SWITCH_THRESHOLD_' + str(i)] = server_info[1]
             j += 1
             if j >= len(server_lists):
                 j = 0

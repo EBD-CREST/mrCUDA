@@ -24,6 +24,9 @@
 #define __NVIDIA_LIBRARY_PATH_ENV_NAME__ "MRCUDA_NVIDIA_LIB_PATH"
 #define __SOCK_PATH_ENV_NAME__ "MRCUDA_SOCK_PATH"
 #define __MHELPER_PATH_ENV_NAME__ "MHELPER_PATH"
+#define __MRCUDA_SWITCH_THRESHOLD_HEADER_ENV_NAME__ "MRCUDA_SWITCH_THRESHOLD_"
+#define __RCUDA_DEVICE_HEADER_ENV_NAME__    "RCUDA_DEVICE_"
+#define __RCUDA_DEVICE_COUNT_ENV_NAME__ "RCUDA_DEVICE_COUNT"
 #define __LOCALHOST__ "localhost"
 
 MRCUDAState_e mrcudaState;
@@ -304,8 +307,8 @@ void mrcuda_init()
             REPORT_ERROR_AND_EXIT("%s is not specified.\n", __MHELPER_PATH_ENV_NAME__);
 
         // Initialize mrcudaNumGPUs and mrcudaGPUInfos
-        if ((rCUDANumGPUs = getenv("RCUDA_DEVICE_COUNT")) == NULL)
-            REPORT_ERROR_AND_EXIT("RCUDA_DEVICE_COUNT is not specified.\n");
+        if ((rCUDANumGPUs = getenv(__RCUDA_DEVICE_COUNT_ENV_NAME__)) == NULL)
+            REPORT_ERROR_AND_EXIT(__RCUDA_DEVICE_COUNT_ENV_NAME__ " is not specified.\n");
 
         // Allocate space for global variables.
         if ((mrcudaSymRCUDA = malloc(sizeof(MRCUDASym_t))) == NULL)
@@ -330,13 +333,14 @@ void mrcuda_init()
         // Initialize each GPU information.
         mrcudaNumGPUs = (int)strtol(rCUDANumGPUs, &endptr, 10);
         if (*endptr != '\0')
-            REPORT_ERROR_AND_EXIT("RCUDA_DEVICE_COUNT's value is not valid.\n");
+            REPORT_ERROR_AND_EXIT(__RCUDA_DEVICE_COUNT_ENV_NAME__"'s value is not valid.\n");
         else if ((mrcudaGPUList = calloc(mrcudaNumGPUs, sizeof(MRCUDAGPU_t))) == NULL)
             REPORT_ERROR_AND_EXIT("Cannot allocate memmory for mrcudaGPUInfos.\n");
 
         for (i = 0; i < mrcudaNumGPUs; i++) {
+            mrcudaGPUList[i].cudaLaunchCount = 0;
             mrcudaGPUList[i].virtualNumber = i;
-            sprintf(envName, "RCUDA_DEVICE_%d", i);
+            sprintf(envName, __RCUDA_DEVICE_HEADER_ENV_NAME__"%d", i);
             if ((tmp = getenv(envName)) == NULL)
                 REPORT_ERROR_AND_EXIT("%s is not specified.\n", envName);
             if (strcasestr(tmp, __LOCALHOST__) != NULL) {   // native GPU
@@ -356,11 +360,19 @@ void mrcuda_init()
                 j++;
             if (tmp[j] == ':') {
                 mrcudaGPUList[i].realNumber = (int)strtol(&(tmp[j + 1]), &endptr, 10);
-                if(*endptr != '\0')
+                if (*endptr != '\0')
                     REPORT_ERROR_AND_EXIT("%s's value is not valid.\n", envName);
             }
             else
                 mrcudaGPUList[i].realNumber = 0;
+
+            // Get the threshold value.
+            sprintf(envName, __MRCUDA_SWITCH_THRESHOLD_HEADER_ENV_NAME__"%d", i);
+            if ((tmp = getenv(envName)) == NULL)
+                REPORT_ERROR_AND_EXIT("%s is not specified.\n", envName);
+            mrcudaGPUList[i].switchThreshold = (int)strtol(tmp, &endptr, 10);
+            if (*endptr != '\0')
+                REPORT_ERROR_AND_EXIT("%s's value is not valid.\n", envName);
         }
 
         // Initialize the record/replay module.
