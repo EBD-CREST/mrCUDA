@@ -206,11 +206,11 @@ typedef struct cudaRegisterFunction_t {
         size_t offset;    /* relative to the start of the specified shared memory. */
     } deviceName;
     int thread_limit;
-    uint3 tid;
-    uint3 bid;
-    dim3 bDim;
-    dim3 gDim;
-    int wSize;
+    uint3* tid;
+    uint3* bid;
+    dim3* bDim;
+    dim3* gDim;
+    int* wSize;
     MRCUDASharedMem_t shminfo;
     /** 
      * pointer to cudaRegisterFatBinary_t.fatCubinHandle
@@ -407,6 +407,7 @@ typedef enum MRCUDAGPUStatus_e {
 struct MRCUDAGPU_t {
     int virtualNumber;
     int realNumber;
+    int nativeFromStart;
     MRCUDAGPUStatus_e status;
     pthread_mutex_t mutex;
     MRCUDASym_t *defaultHandler;

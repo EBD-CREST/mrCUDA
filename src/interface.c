@@ -235,9 +235,11 @@ extern __host__ cudaError_t CUDARTAPI cudaHostAlloc(void **pHost, size_t size, u
     void *pHost1;
     mrcuda_function_call_lock(gpu);
     ret = gpu->defaultHandler->mrcudaHostAlloc(pHost, size, flags);
-    // This function has to be recorded regardless of rCUDA are being executed or not.
-    // This ensures that we calls cudaFreeHost using the right library (rCUDA or native).
-    mrcuda_record_cudaHostAlloc(gpu, pHost, size, flags);
+    if (!gpu->nativeFromStart)
+        // This function has to be recorded regardless we are using rCUDA or not.
+        // This ensures that we calls cudaFreeHost using the right library (rCUDA or native).
+        // However, GPUs that are running natively from the start don't need to be recorded.
+        mrcuda_record_cudaHostAlloc(gpu, pHost, size, flags);
     mrcuda_function_call_release(gpu);
     return ret;
 }
@@ -263,8 +265,11 @@ extern __host__ cudaError_t CUDARTAPI cudaFreeHost(void *ptr)
     MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
     mrcuda_function_call_lock(gpu);
-    // Call the right library of cudaFreeHost according to the recorded cudaHostAlloc calls.
-    mrcuda_replay_cudaFreeHost(gpu, ptr)->mrcudaFreeHost(ptr);
+    if (!gpu->nativeFromStart)
+        // Call the right library of cudaFreeHost according to the recorded cudaHostAlloc calls.
+        mrcuda_replay_cudaFreeHost(gpu, ptr)->mrcudaFreeHost(ptr);
+    else
+        gpu->defaultHandler->mrcudaFreeHost(ptr);
     mrcuda_function_call_release(gpu);
     return ret;
 }

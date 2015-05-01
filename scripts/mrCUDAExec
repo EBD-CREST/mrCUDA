@@ -50,6 +50,11 @@ def parse_args():
         default = '/tmp/mrcuda.sock',
         help = 'Switching socket path [default = /tmp/mrcuda.sock]'
     )
+    parser.add_option('--mhelper-path',
+        dest = 'mhelper_path',
+        default = '/dev/null',
+        help = 'mhelper\'s path [default = /dev/null]'
+    )
 
     options, args = parser.parse_args()
     if not options.server_address and not options.server_file:
@@ -83,6 +88,7 @@ def main(options, args):
     environment['MRCUDA_RCUDA_LIB_PATH'] = options.rcuda_libcudart
     environment['MRCUDA_SWITCH_THRESHOLD'] = options.switch_threshold
     environment['MRCUDA_SOCK_PATH'] = options.sock_path
+    environment['MHELPER_PATH'] = options.mhelper_path
 
     i = 0
     if options.server_address:

@@ -67,6 +67,7 @@ void mrcuda_record_init()
     for (i = 0; i < mrcudaNumGPUs; i++) {
         if (mrcudaGPUList[i].status == MRCUDA_GPU_STATUS_RCUDA) {
             mrecordGPUList[i].mrcudaGPU = &(mrcudaGPUList[i]);
+            mrcudaGPUList[i].mrecordGPU = &(mrecordGPUList[i]);
             mrecordGPUList[i].activeMemoryTable = g_hash_table_new(g_direct_hash, g_direct_equal);
             if(mrecordGPUList[i].activeMemoryTable == NULL)
                 REPORT_ERROR_AND_EXIT("Cannot allocate memory for activeMemoryTable of GPU #%d.\n", i);
@@ -158,11 +159,11 @@ void mrcuda_record_cudaRegisterFunction(
     recordPtr->data.cudaRegisterFunction.deviceFun.ptr = deviceFun;
     recordPtr->data.cudaRegisterFunction.deviceName.ptr = deviceName;
     recordPtr->data.cudaRegisterFunction.thread_limit = thread_limit;
-    recordPtr->data.cudaRegisterFunction.tid = *tid;
-    recordPtr->data.cudaRegisterFunction.bid = *bid;
-    recordPtr->data.cudaRegisterFunction.bDim = *bDim;
-    recordPtr->data.cudaRegisterFunction.gDim = *gDim;
-    recordPtr->data.cudaRegisterFunction.wSize = *wSize;
+    recordPtr->data.cudaRegisterFunction.tid = tid;
+    recordPtr->data.cudaRegisterFunction.bid = bid;
+    recordPtr->data.cudaRegisterFunction.bDim = bDim;
+    recordPtr->data.cudaRegisterFunction.gDim = gDim;
+    recordPtr->data.cudaRegisterFunction.wSize = wSize;
     recordPtr->replayFunc = &mrcuda_replay_cudaRegisterFunction;
 }
 
@@ -382,34 +383,18 @@ void mrcuda_replay_cudaRegisterFatBinary(MRCUDAGPU_t *mrcudaGPU, MRecord_t *reco
  */
 void mrcuda_replay_cudaRegisterFunction(MRCUDAGPU_t *mrcudaGPU, MRecord_t *record)
 {
-    uint3 tid, bid;
-    dim3 bDim, gDim;
-    int wSize;
     mrcudaGPU->defaultHandler->__mrcudaRegisterFunction(
         *(record->data.cudaRegisterFunction.fatCubinHandlePtr),
         record->data.cudaRegisterFunction.hostFun.ptr,
         record->data.cudaRegisterFunction.deviceFun.ptr,
         record->data.cudaRegisterFunction.deviceName.ptr,
         record->data.cudaRegisterFunction.thread_limit,
-        &tid,
-        &bid,
-        &bDim,
-        &gDim,
-        &wSize
+        record->data.cudaRegisterFunction.tid,
+        record->data.cudaRegisterFunction.bid,
+        record->data.cudaRegisterFunction.bDim,
+        record->data.cudaRegisterFunction.gDim,
+        record->data.cudaRegisterFunction.wSize
     );
-    assert(record->data.cudaRegisterFunction.tid.x == tid.x);
-    assert(record->data.cudaRegisterFunction.tid.y == tid.y);
-    assert(record->data.cudaRegisterFunction.tid.z == tid.z);
-    assert(record->data.cudaRegisterFunction.bid.x == bid.x);
-    assert(record->data.cudaRegisterFunction.bid.y == bid.y);
-    assert(record->data.cudaRegisterFunction.bid.z == bid.z);
-    assert(record->data.cudaRegisterFunction.bDim.x == bDim.x);
-    assert(record->data.cudaRegisterFunction.bDim.y == bDim.y);
-    assert(record->data.cudaRegisterFunction.bDim.z == bDim.z);
-    assert(record->data.cudaRegisterFunction.gDim.x == gDim.x);
-    assert(record->data.cudaRegisterFunction.gDim.y == gDim.y);
-    assert(record->data.cudaRegisterFunction.gDim.z == gDim.z);
-    assert(record->data.cudaRegisterFunction.wSize == wSize);
 }
 
 /**

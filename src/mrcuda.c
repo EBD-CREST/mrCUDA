@@ -339,12 +339,14 @@ void mrcuda_init()
             sprintf(envName, "RCUDA_DEVICE_%d", i);
             if ((tmp = getenv(envName)) == NULL)
                 REPORT_ERROR_AND_EXIT("%s is not specified.\n", envName);
-            if (strcasestr(tmp, __LOCALHOST__) == NULL) {   // native GPU
+            if (strcasestr(tmp, __LOCALHOST__) != NULL) {   // native GPU
+                mrcudaGPUList[i].nativeFromStart = 1;
                 mrcudaGPUList[i].status = MRCUDA_GPU_STATUS_NATIVE;
                 mrcudaGPUList[i].defaultHandler = mrcudaSymNvidia;
                 __hasNativeGPU = 1;
             }
             else {    // rCUDA GPU
+                mrcudaGPUList[i].nativeFromStart = 0;
                 mrcudaGPUList[i].status = MRCUDA_GPU_STATUS_RCUDA;
                 mrcudaGPUList[i].defaultHandler = mrcudaSymRCUDA;
             }
@@ -353,7 +355,7 @@ void mrcuda_init()
             while (tmp[j] != '\0' && tmp[j] != ':')
                 j++;
             if (tmp[j] == ':') {
-                mrcudaGPUList[i].realNumber = (int)strtol(&(tmp[j]), &endptr, 10);
+                mrcudaGPUList[i].realNumber = (int)strtol(&(tmp[j + 1]), &endptr, 10);
                 if(*endptr != '\0')
                     REPORT_ERROR_AND_EXIT("%s's value is not valid.\n", envName);
             }
@@ -366,6 +368,8 @@ void mrcuda_init()
 
         // Initialize mutex for switching locking.
         pthread_mutex_init(&__switch_mutex, NULL);
+
+        mrcudaState = MRCUDA_STATE_RUNNING;
 
         // Start listening on the specified socket path.
         /*if(mrcuda_comm_listen_for_signal(__sockPath, &mrcuda_switch) != 0)
