@@ -211,7 +211,7 @@ typedef struct cudaRegisterFunction_t {
     dim3* bDim;
     dim3* gDim;
     int* wSize;
-    MRCUDASharedMem_t shminfo;
+    MRCUDASharedMem_t sharedMem;
     /** 
      * pointer to cudaRegisterFatBinary_t.fatCubinHandle
      * However, we cannot use it in IPC.
@@ -237,7 +237,7 @@ typedef struct cudaRegisterVar_t {
     int size;
     int constant;
     int global;
-    MRCUDASharedMem_t shminfo;
+    MRCUDASharedMem_t sharedMem;
     /** 
      * pointer to cudaRegisterFatBinary_t.fatCubinHandle
      * However, we cannot use it in IPC.
@@ -259,6 +259,7 @@ typedef struct cudaRegisterTexture_t {
     int dim;
     int norm;
     int ext;
+    MRCUDASharedMem_t sharedMem;
     /** 
      * pointer to cudaRegisterFatBinary_t.fatCubinHandle
      * However, we cannot use it in IPC.
@@ -313,6 +314,14 @@ typedef struct cudaMemcpy_t {
     MRCUDASharedMem_t sharedMem;
 } cudaMemcpy_t;
 
+typedef struct cudaLaunch_t {
+    const void *func;
+} cudaLaunch_t;
+
+typedef struct cudaGetDeviceProperties_t {
+    struct cudaDeviceProp prop;
+} cudaGetDeviceProperties_t;
+
 /* MRecord Struct */
 typedef struct MRecord_t {
     char *functionName;
@@ -335,7 +344,8 @@ typedef struct MRecord_t {
 
 /* Communication-related Structs */
 typedef enum MHelperCommandType_e {
-    MRCOMMAND_TYPE_CUDAREGISTERFATBINARY = 0,
+    MRCOMMAND_TYPE_CUCTXCREATE = 0,
+    MRCOMMAND_TYPE_CUDAREGISTERFATBINARY,
     MRCOMMAND_TYPE_CUDAREGISTERFUNCTION,
     MRCOMMAND_TYPE_CUDAREGISTERVAR,
     MRCOMMAND_TYPE_CUDAREGISTERTEXTURE,
@@ -347,7 +357,10 @@ typedef enum MHelperCommandType_e {
     MRCOMMAND_TYPE_CUDASETDEVICEFLAGS,
     MRCOMMAND_TYPE_CUDAMEMCPYTOSYMBOL,
     MRCOMMAND_TYPE_CUDAMEMCPY,
-    MRCOMMAND_TYPE_CUCTXCREATE
+    MRCOMMAND_TYPE_CUDALAUNCH,
+    MRCOMMAND_TYPE_CUDADEVICERESET,
+    MRCOMMAND_TYPE_CUDADEVICESYNCHRONIZE,
+    MRCOMMAND_TYPE_CUDAGETDEVICEPROPERTIES
 } MHelperCommandType_e;
 
 typedef struct MHelperCommand_t {
@@ -366,7 +379,8 @@ typedef struct MHelperCommand_t {
         cudaSetDeviceFlags_t cudaSetDeviceFlags;
         cudaMemcpyToSymbol_t cudaMemcpyToSymbol;
         cudaMemcpy_t cudaMemcpy;
-    } command;
+        cudaLaunch_t cudaLaunch;
+    } args;
 } MHelperCommand_t;
 
 typedef struct MHelperResult_t {
@@ -376,7 +390,9 @@ typedef struct MHelperResult_t {
     cudaError_t cudaError;
     union {
         cudaRegisterFatBinary_t cudaRegisterFatBinary;
-    } result;
+        cudaGetDeviceProperties_t cudaGetDeviceProperties;
+        cudaMalloc_t cudaMalloc;
+    } args;
 } MHelperResult_t;
 
 struct MHelperProcess_t {
