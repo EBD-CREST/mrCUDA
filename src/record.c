@@ -646,9 +646,11 @@ gboolean __sync_symbol_instance(gpointer key, gpointer value, gpointer user_data
         case MRCUDA_GPU_STATUS_HELPER:
             command.id = mhelper_generate_command_id(mrcudaGPU);
             command.type = MRCOMMAND_TYPE_CUDAMEMCPYTOSYMBOL;
-            command.command.cudaMemcpyToSymbol.dataSize = record->data.cudaRegisterVar.size;
-            command.command.cudaMemcpyToSymbol.kind = cudaMemcpyHostToDevice;
-            command.command.cudaMemcpyToSymbol.sharedMem = sharedMemInfo->sharedMem;
+            command.args.cudaMemcpyToSymbol.count = record->data.cudaRegisterVar.size;
+            command.args.cudaMemcpyToSymbol.offset = 0;
+            command.args.cudaMemcpyToSymbol.kind = cudaMemcpyHostToDevice;
+            command.args.cudaMemcpyToSymbol.stream = NULL;
+            command.args.cudaMemcpyToSymbol.sharedMem = sharedMemInfo->sharedMem;
             mhelper_mem_detach(sharedMemInfo);
             result = mhelper_call(mrcudaGPU->mhelperProcess, command);
             free(sharedMemInfo);

@@ -28,7 +28,7 @@ static int exec_cudaRegisterFatBinary(MHelperCommand_t command, MHelperResult_t 
     void **fatCubinHandle;
     __fatBinC_Wrapper_t *fatCubinWrapper;
 
-    if ((sharedMemInfo = mhelper_mem_get(command.command.cudaRegisterFatBinary.sharedMem)) == NULL)
+    if ((sharedMemInfo = mhelper_mem_get(command.args.cudaRegisterFatBinary.sharedMem)) == NULL)
         goto __exec_cudaRegisterFatBinary_err_0;
     fatCubinWrapper = sharedMemInfo->startAddr;
     fatCubinWrapper->data = sharedMemInfo->startAddr + sizeof(__fatBinC_Wrapper_t);

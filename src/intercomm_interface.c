@@ -408,23 +408,239 @@ cudaError_t mhelper_int_cudaFree_internal(MRCUDAGPU_t *mrcudaGPU, void *devPtr)
     return result.cudaError;
 }
 
-cudaError_t mhelper_int_cudaMemcpyToSymbolAsync(const void *symbol, const void *src, size_t count, size_t offset, enum cudaMemcpyKind kind, cudaStream_t stream);
-cudaError_t mhelper_int_cudaMemcpyToSymbolAsync_internal(MRCUDAGPU_t *mrcudaGPU, const void *symbol, const void *src, size_t count, size_t offset, enum cudaMemcpyKind kind, cudaStream_t stream);
+cudaError_t mhelper_int_cudaMemcpyToSymbolAsync(const void *symbol, const void *src, size_t count, size_t offset, enum cudaMemcpyKind kind, cudaStream_t stream)
+{
+    return mhelper_int_cudaMemcpyToSymbolAsync_internal(
+        mrcuda_get_current_gpu(),
+        symbol,
+        src,
+        count,
+        offset,
+        kind,
+        stream
+    );
+}
 
-cudaError_t mhelper_int_cudaMemcpyFromSymbolAsync(void *dst, const void *symbol, size_t count, size_t offset, enum cudaMemcpyKind kind, cudaStream_t stream);
-cudaError_t mhelper_int_cudaMemcpyFromSymbolAsync_internal(MRCUDAGPU_t *mrcudaGPU, void *dst, const void *symbol, size_t count, size_t offset, enum cudaMemcpyKind kind, cudaStream_t stream);
+cudaError_t mhelper_int_cudaMemcpyToSymbolAsync_internal(MRCUDAGPU_t *mrcudaGPU, const void *symbol, const void *src, size_t count, size_t offset, enum cudaMemcpyKind kind, cudaStream_t stream)
+{
+    MHelperCommand_t command;
+    MHelperResult_t result;
+    MHelperProcess_t *mhelperProcess = mrcudaGPU->mhelperProcess;
+    MRCUDASharedMemLocalInfo_t *sharedMemInfo = __mhelper_mem_malloc_safe(count + strlen(symbol) + 1);
+    void *addr = sharedMemInfo->startAddr;
 
-cudaError_t mhelper_int_cudaSetupArgument(const void *arg, size_t size, size_t offset);
-cudaError_t mhelper_int_cudaSetupArgument_internal(MRCUDAGPU_t *mrcudaGPU, const void *arg, size_t size, size_t offset);
+    addr = mempcpy(addr, src, count);
+    strcpy(addr, symbol);
 
-cudaError_t mhelper_int_cudaStreamSynchronize(cudaStream_t stream);
-cudaError_t mhelper_int_cudaStreamSynchronize_internal(MRCUDAGPU_t *mrcudaGPU, cudaStream_t stream);
+    command.id = mhelper_generate_command_id(mrcudaGPU);
+    command.type = MRCOMMAND_TYPE_CUDAMEMCPYTOSYMBOLASYNC;
+    command.args.cudaMemcpyToSymbol.count = count;
+    command.args.cudaMemcpyToSymbol.offset = offset;
+    command.args.cudaMemcpyToSymbol.kind = kind;
+    command.args.cudaMemcpyToSymbol.stream = stream;
+    command.args.cudaMemcpyToSymbol.sharedMem = sharedMemInfo->sharedMem;
+    mhelper_mem_detach(sharedMemInfo);
+    result = mhelper(mhelperProcess, command);
+    free(sharedMemInfo);
+    if (result.internalError != 0)
+        REPORT_ERROR_AND_EXIT("mhelper encountered an error during cudaMemcpyToSymbolAsync execution.\n");
+    return result.cudaError;
+}
 
-cudaError_t mhelper_int_cudaConfigureCall(dim3 gridDim, dim3 blockDim, size_t sharedMem, cudaStream_t stream);
-cudaError_t mhelper_int_cudaConfigureCall_internal(MRCUDAGPU_t *mrcudaGPU, dim3 gridDim, dim3 blockDim, size_t sharedMem, cudaStream_t stream);
+cudaError_t mhelper_int_cudaMemcpyFromSymbolAsync(void *dst, const void *symbol, size_t count, size_t offset, enum cudaMemcpyKind kind, cudaStream_t stream)
+{
+    return mhelper_int_cudaMemcpyFromSymbolAsync_internal(
+        mrcuda_get_current_gpu(),
+        dst,
+        symbol,
+        count,
+        offset,
+        kind,
+        stream
+    );
+}
 
-cudaError_t mhelper_int_cudaGetLastError(void);
-cudaError_t mhelper_int_cudaGetLastError_internal(MRCUDAGPU_t *mrcudaGPU);
+cudaError_t mhelper_int_cudaMemcpyFromSymbolAsync_internal(MRCUDAGPU_t *mrcudaGPU, void *dst, const void *symbol, size_t count, size_t offset, enum cudaMemcpyKind kind, cudaStream_t stream)
+{
+    MHelperCommand_t command;
+    MHelperResult_t result;
+    MHelperProcess_t *mhelperProcess = mrcudaGPU->mhelperProcess;
+    MRCUDASharedMemLocalInfo_t *sharedMemInfo = __mhelper_mem_malloc_safe(strlen(symbol) + 1);
+    void *addr = sharedMemInfo->startAddr;
 
-cudaError_t mhelper_int_cudaMemcpy(void *dst, const void *src, size_t count, enum cudaMemcpyKind kind);
-cudaError_t mhelper_int_cudaMemcpy_internal(MRCUDAGPU_t *mrcudaGPU, void *dst, const void *src, size_t count, enum cudaMemcpyKind kind);
+    strcpy(addr, symbol);
+
+    command.id = mhelper_generate_command_id(mrcudaGPU);
+    command.type = MRCOMMAND_TYPE_CUDAMEMCPYFROMSYMBOL;
+    command.args.cudaMemcpyFromSymbol.count = count;
+    command.args.cudaMemcpyFromSymbol.offset = offset;
+    command.args.cudaMemcpyFromSymbol.kind = kind;
+    command.args.cudaMemcpyFromSymbol.stream = stream;
+    command.args.cudaMemcpyFromSymbol.sharedMem = sharedMemInfo->sharedMem;
+    mhelper_mem_detach(sharedMemInfo);
+    result = mhelper(mhelperProcess, command);
+    free(sharedMemInfo);
+    if (result.internalError != 0)
+        REPORT_ERROR_AND_EXIT("mhelper encountered an error during cudaMemcpyFromSymbolAsync execution.\n");
+    if (result.cudaError == cudaSuccess) {
+        if ((sharedMemInfo = mhelper_mem_get(result.args.cudaMemcpyFromSymbol.sharedMem)) == NULL)
+            REPORT_ERROR_AND_EXIT("Cannot attach shared memory sent from mhelper.\n");
+        memcpy(dst, sharedMemInfo->startAddr, count);
+        mhelper_mem_free(sharedMemInfo);
+    }
+    return result.cudaError;
+}
+
+cudaError_t mhelper_int_cudaSetupArgument(const void *arg, size_t size, size_t offset)
+{
+    return mhelper_int_cudaSetupArgument_internal(
+        mrcuda_get_current_gpu(),
+        arg,
+        size,
+        offset
+    );
+}
+
+cudaError_t mhelper_int_cudaSetupArgument_internal(MRCUDAGPU_t *mrcudaGPU, const void *arg, size_t size, size_t offset)
+{
+    MHelperCommand_t command;
+    MHelperResult_t result;
+    MHelperProcess_t *mhelperProcess = mrcudaGPU->mhelperProcess;
+    MRCUDASharedMemLocalInfo_t *sharedMemInfo = __mhelper_mem_malloc_safe(size);
+    void *addr = sharedMemInfo->startAddr;
+
+    memcpy(addr, arg, size);
+
+    command.id = mhelper_generate_command_id(mrcudaGPU);
+    command.type = MRCOMMAND_TYPE_CUDASETUPARGUMENT;
+    command.args.cudaSetupArgument.size = size;
+    command.args.cudaSetupArgument.offset = offset;
+    command.args.cudaSetupArgument.sharedMem = sharedMemInfo->sharedMem;
+    mhelper_mem_detach(sharedMemInfo);
+    result = mhelper(mhelperProcess, command);
+    free(sharedMemInfo);
+    if (result.internalError != 0)
+        REPORT_ERROR_AND_EXIT("mhelper encountered an error during cudaSetupArgument execution.\n");
+    return result.cudaError;
+}
+
+cudaError_t mhelper_int_cudaStreamSynchronize(cudaStream_t stream)
+{
+    return mhelper_int_cudaStreamSynchronize_internal(mrcuda_get_current_gpu(), stream);
+}
+
+cudaError_t mhelper_int_cudaStreamSynchronize_internal(MRCUDAGPU_t *mrcudaGPU, cudaStream_t stream)
+{
+    MHelperCommand_t command;
+    MHelperResult_t result;
+    MHelperProcess_t *mhelperProcess = mrcudaGPU->mhelperProcess;
+
+    command.id = mhelper_generate_command_id(mrcudaGPU);
+    command.type = MRCOMMAND_TYPE_CUDASTREAMSYNCHRONIZE;
+    command.args.cudaStreamSynchronize.stream = stream;
+    result = mhelper_call(mhelperProcess, command);
+    if (result.internalError != 0)
+        REPORT_ERROR_AND_EXIT("mhelper encountered an error during cudaStreamSynchronize execution.\n");
+    return result.cudaError;
+}
+
+cudaError_t mhelper_int_cudaConfigureCall(dim3 gridDim, dim3 blockDim, size_t sharedMem, cudaStream_t stream)
+{
+    return mhelper_int_cudaConfigureCall_internal(
+        mrcuda_get_current_gpu(),
+        gridDim,
+        blockDim,
+        sharedMem,
+        stream
+    );
+}
+
+cudaError_t mhelper_int_cudaConfigureCall_internal(MRCUDAGPU_t *mrcudaGPU, dim3 gridDim, dim3 blockDim, size_t sharedMem, cudaStream_t stream)
+{
+    MHelperCommand_t command;
+    MHelperResult_t result;
+    MHelperProcess_t *mhelperProcess = mrcudaGPU->mhelperProcess;
+
+    command.id = mhelper_generate_command_id(mrcudaGPU);
+    command.type = MRCOMMAND_TYPE_CUDACONFIGURECALL;
+    command.args.cudaConfigureCall.gridDim = gridDim;
+    command.args.cudaConfigureCall.blockDim = blockDim;
+    command.args.cudaConfigureCall.sharedMem = sharedMem;
+    command.args.cudaConfigureCall.stream = stream;
+    result = mhelper_call(mhelperProcess, command);
+    if (result.internalError != 0)
+        REPORT_ERROR_AND_EXIT("mhelper encountered an error during cudaConfigureCall execution.\n");
+    return result.cudaError;
+}
+
+cudaError_t mhelper_int_cudaGetLastError(void)
+{
+    return mhelper_int_cudaGetLastError_internal(mrcuda_get_current_gpu());
+}
+
+cudaError_t mhelper_int_cudaGetLastError_internal(MRCUDAGPU_t *mrcudaGPU)
+{
+    MHelperCommand_t command;
+    MHelperResult_t result;
+    MHelperProcess_t *mhelperProcess = mrcudaGPU->mhelperProcess;
+
+    command.id = mhelper_generate_command_id(mrcudaGPU);
+    command.type = MRCOMMAND_TYPE_CUDAGETLASTERROR;
+    result = mhelper_call(mhelperProcess, command);
+    if (result.internalError != 0)
+        REPORT_ERROR_AND_EXIT("mhelper encountered an error during cudaGetLastError execution.\n");
+    return result.cudaError;
+}
+
+cudaError_t mhelper_int_cudaMemcpy(void *dst, const void *src, size_t count, enum cudaMemcpyKind kind)
+{
+    return mhelper_int_cudaMemcpy(
+        mrcuda_get_current_gpu(),
+        dst,
+        src,
+        count,
+        kind
+    );
+}
+
+cudaError_t mhelper_int_cudaMemcpy_internal(MRCUDAGPU_t *mrcudaGPU, void *dst, const void *src, size_t count, enum cudaMemcpyKind kind)
+{
+    MHelperCommand_t command;
+    MHelperResult_t result;
+    MHelperProcess_t *mhelperProcess = mrcudaGPU->mhelperProcess;
+    MRCUDASharedMemLocalInfo_t *sharedMemInfo;
+    void *addr;
+
+    if (kind != cudaMemcpyHostToDevice && kind != cudaMemcpyDeviceToHost)
+        REPORT_ERROR_AND_EXIT("mhelper_int_cudaMemcpy_internal supports only cudaMemcpyHostToDevice and cudaMemcpyDeviceToHost.\n");
+
+    if (kind == cudaMemcpyHostToDevice) {
+        sharedMemInfo = __mhelper_mem_malloc_safe(count);
+        addr = sharedMemInfo->startAddr;
+        memcpy(addr, src, count);
+        command.args.cudaMemcpy.sharedMem = sharedMemInfo->sharedMem;
+    }
+
+    command.id = mhelper_generate_command_id(mrcudaGPU);
+    command.type = MRCOMMAND_TYPE_CUDAMEMCPY;
+    command.args.cudaMemcpy.dst = dst;
+    command.args.cudaMemcpy.src = src;
+    command.args.cudaMemcpy.count = count;
+    command.args.cudaMemcpy.kind = kind;
+
+    if (kind == cudaMemcpyHostToDevice)
+        mhelper_mem_detach(sharedMemInfo);
+    result = mhelper(mhelperProcess, command);
+    if (kind == cudaMemcpyHostToDevice)
+        free(sharedMemInfo);
+    if (result.internalError != 0)
+        REPORT_ERROR_AND_EXIT("mhelper encountered an error during cudaMemcpy execution.\n");
+    if (kind == cudaMemcpyDeviceToHost && result.cudaError == cudaSuccess) {
+        if ((sharedMemInfo = mhelper_mem_get(result.args.cudaMemcpy.sharedMem)) == NULL)
+            REPORT_ERROR_AND_EXIT("Cannot attach shared memory sent from mhelper.\n");
+        memcpy(dst, sharedMemInfo->startAddr, count);
+        mhelper_mem_free(sharedMemInfo);
+    }
+    return result.cudaError;
+}
+

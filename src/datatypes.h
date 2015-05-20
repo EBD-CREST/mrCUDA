@@ -302,14 +302,25 @@ typedef struct cudaSetDeviceFlags_t {
 } cudaSetDeviceFlags_t;
 
 typedef struct cudaMemcpyToSymbol_t {
-    size_t dataSize;
+    size_t count;
+    size_t offset;
     enum cudaMemcpyKind kind;
+    cudaStream_t stream;
     MRCUDASharedMem_t sharedMem;
 } cudaMemcpyToSymbol_t;
 
+typedef struct cudaMemcpyFromSymbol_t {
+    size_t count;
+    size_t offset;
+    enum cudaMemcpyKind kind;
+    cudaStream_t stream;
+    MRCUDASharedMem_t sharedMem;
+} cudaMemcpyFromSymbol_t;
+
 typedef struct cudaMemcpy_t {
     void *dst;
-    size_t size;
+    const void *src;
+    size_t count;
     enum cudaMemcpyKind kind;
     MRCUDASharedMem_t sharedMem;
 } cudaMemcpy_t;
@@ -318,9 +329,26 @@ typedef struct cudaLaunch_t {
     const void *func;
 } cudaLaunch_t;
 
+typedef struct cudaSetupArgument_t {
+    size_t size;
+    size_t offset;
+    MRCUDASharedMem_t sharedMem;
+} cudaSetupArgument_t;
+
+typedef struct cudaConfigureCall_t {
+    dim3 gridDim;
+    dim3 blockDim;
+    size_t sharedMem;
+    cudaStream_t stream;
+} cudaConfigureCall_t;
+
 typedef struct cudaGetDeviceProperties_t {
     struct cudaDeviceProp prop;
 } cudaGetDeviceProperties_t;
+
+typedef struct cudaStreamSynchronize_t {
+    cudaStream_t stream;
+} cudaStreamSynchronize_t;
 
 /* MRecord Struct */
 typedef struct MRecord_t {
@@ -356,11 +384,17 @@ typedef enum MHelperCommandType_e {
     MRCOMMAND_TYPE_CUDASTREAMCREATE,
     MRCOMMAND_TYPE_CUDASETDEVICEFLAGS,
     MRCOMMAND_TYPE_CUDAMEMCPYTOSYMBOL,
+    MRCOMMAND_TYPE_CUDAMEMCPYTOSYMBOLASYNC,
+    MRCOMMAND_TYPE_CUDAMEMCPYFROMSYMBOL,
     MRCOMMAND_TYPE_CUDAMEMCPY,
+    MRCOMMAND_TYPE_CUDASETUPARGUMENT,
+    MRCOMMAND_TYPE_CUDACONFIGURECALL,
     MRCOMMAND_TYPE_CUDALAUNCH,
     MRCOMMAND_TYPE_CUDADEVICERESET,
     MRCOMMAND_TYPE_CUDADEVICESYNCHRONIZE,
-    MRCOMMAND_TYPE_CUDAGETDEVICEPROPERTIES
+    MRCOMMAND_TYPE_CUDAGETDEVICEPROPERTIES,
+    MRCOMMAND_TYPE_CUDASTREAMSYNCHRONIZE,
+    MRCOMMAND_TYPE_CUDAGETLASTERROR
 } MHelperCommandType_e;
 
 typedef struct MHelperCommand_t {
@@ -378,8 +412,12 @@ typedef struct MHelperCommand_t {
         cudaStreamCreate_t cudaStreamCreate;
         cudaSetDeviceFlags_t cudaSetDeviceFlags;
         cudaMemcpyToSymbol_t cudaMemcpyToSymbol;
+        cudaMemcpyFromSymbol_t cudaMemcpyFromSymbol;
         cudaMemcpy_t cudaMemcpy;
+        cudaSetupArgument_t cudaSetupArgument;
+        cudaConfigureCall_t cudaConfigureCall;
         cudaLaunch_t cudaLaunch;
+        cudaStreamSynchronize_t cudaStreamSynchronize;
     } args;
 } MHelperCommand_t;
 
@@ -392,6 +430,8 @@ typedef struct MHelperResult_t {
         cudaRegisterFatBinary_t cudaRegisterFatBinary;
         cudaGetDeviceProperties_t cudaGetDeviceProperties;
         cudaMalloc_t cudaMalloc;
+        cudaMemcpyFromSymbol_t cudaMemcpyFromSymbol;
+        cudaMemcpy_t cudaMemcpy;
     } args;
 } MHelperResult_t;
 
