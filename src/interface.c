@@ -438,9 +438,10 @@ extern __host__ cudaError_t CUDARTAPI cudaMemGetInfo(size_t *free, size_t *total
  */
 extern __host__ cudaError_t CUDARTAPI cudaSetDevice(int device)
 {
-    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
+    MRCUDAGPU_t *gpu = &(mrcudaGPUList[device]);
     cudaError_t ret;
     mrcuda_function_call_lock(gpu);
+    mrcuda_set_current_gpu(device);
     ret = gpu->defaultHandler->mrcudaSetDevice(device);
     mrcuda_function_call_release(gpu);
     return ret;
