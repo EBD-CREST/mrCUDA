@@ -570,10 +570,10 @@ gboolean __sync_mem_instance(gpointer key, gpointer value, gpointer user_data)
         case MRCUDA_GPU_STATUS_HELPER:
             command.id = mhelper_generate_command_id(mrcudaGPU);
             command.type = MRCOMMAND_TYPE_CUDAMEMCPY;
-            command.command.cudaMemcpy.dst = record->data.cudaMalloc.devPtr;
-            command.command.cudaMemcpy.size = record->data.cudaMalloc.size;
-            command.command.cudaMemcpy.kind = cudaMemcpyHostToDevice;
-            command.command.cudaMemcpy.sharedMem = sharedMemInfo->sharedMem;
+            command.args.cudaMemcpy.dst = record->data.cudaMalloc.devPtr;
+            command.args.cudaMemcpy.count = record->data.cudaMalloc.size;
+            command.args.cudaMemcpy.kind = cudaMemcpyHostToDevice;
+            command.args.cudaMemcpy.sharedMem = sharedMemInfo->sharedMem;
             mhelper_mem_detach(sharedMemInfo);
             result = mhelper_call(mrcudaGPU->mhelperProcess, command);
             free(sharedMemInfo);

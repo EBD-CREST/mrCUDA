@@ -17,6 +17,24 @@ extern void** CUDARTAPI __cudaRegisterFatBinary(
 static int gpuID;
 
 /**
+ * Execute cuCtxCreate command.
+ * @param command command information.
+ * @param result output result.
+ * @return 0 always.
+ */
+static int exec_cuCtxCreate(MHelperCommand_t command, MHelperResult_t *result)
+{
+    CUcontext pctx;
+
+    result->cudaError = cuCtxCreate(&pctx, CU_CTX_SCHED_AUTO, gpuID) == CUDA_SUCCESS ? cudaSuccess : cudaErrorApiFailureBase;
+    result->id = command.id;
+    result->type = command.type;
+    result->internalError = 0;
+    return 0;
+}
+
+
+/**
  * Execute __cudaRegisterFatBinary command.
  * @param command command information.
  * @param result output result.
@@ -37,7 +55,7 @@ static int exec_cudaRegisterFatBinary(MHelperCommand_t command, MHelperResult_t 
     result->type = command.type;
     result->internalError = 0;
     result->cudaError = cudaSuccess;
-    result->result.cudaRegisterFatBinary.fatCubinHandle = fatCubinHandle;
+    result->args.cudaRegisterFatBinary.fatCubinHandle = fatCubinHandle;
     mhelper_mem_free(sharedMemInfo);
     return 0;
 
@@ -45,15 +63,231 @@ __exec_cudaRegisterFatBinary_err_0:
     return -1;
 }
 
-static int exec_cuCtxCreate(MHelperCommand_t command, MHelperResult_t *result)
+/**
+ * Execute __cudaUnregisterFatBinary command.
+ * @param command command information.
+ * @param result output result.
+ * @return 0 always.
+ */
+static int exec_cudaUnregisterFatBinary(MHelperCommand_t command, MHelperResult_t *result)
 {
-    CUcontext pctx;
+    __cudaUnregisterFatBinary(command.args.cudaUnregisterFatBinary.fatCubinHandle);
+    result->id = command.id;
+    result->type = command.type;
+    result->internalError = 0;
+    result->cudaError = cudaSuccess;
+    return 0;
+}
 
-    result->cudaError = cuCtxCreate(&pctx, CU_CTX_SCHED_AUTO, gpuID) == CUDA_SUCCESS ? cudaSuccess : cudaErrorApiFailureBase;
+/**
+ * Execute __cudaRegisterFunction command.
+ * @param command command information.
+ * @param result output result.
+ * @return 0 on success; -1 otherwise.
+ */
+static int exec_cudaRegisterFunction(MHelperCommand_t command, MHelperResult_t *result)
+{
+    MRCUDASharedMemLocalInfo_t *sharedMemInfo;
+
+    if ((sharedMemInfo = mhelper_mem_get(command.args.cudaRegisterFunction.sharedMem)) == NULL)
+        goto __exec_cudaRegisterFunction_err_0;
+    __cudaRegisterFunction(
+        command.args.cudaRegisterFunction.fatCubinHandle,
+        (char *)(sharedMemInfo->startAddr + command.args.cudaRegisterFunction.hostFun.offset),
+        (char *)(sharedMemInfo->startAddr + command.args.cudaRegisterFunction.deviceFun.offset),
+        (char *)(sharedMemInfo->startAddr + command.args.cudaRegisterFunction.deviceName.offset),
+        command.args.cudaRegisterFunction.thread_limit,
+        command.args.cudaRegisterFunction.tid,
+        command.args.cudaRegisterFunction.bid,
+        command.args.cudaRegisterFunction.bDim,
+        command.args.cudaRegisterFunction.gDim,
+        command.args.cudaRegisterFunction.wSize
+    );
+    result->id = command.id;
+    result->type = command.type;
+    result->internalError = 0;
+    result->cudaError = cudaSuccess;
+    mhelper_mem_free(sharedMemInfo);
+    return 0;
+
+__exec_cudaRegisterFunction_err_0:
+    return -1;
+}
+
+/**
+ * Execute cudaLaunch command.
+ * @param command command information.
+ * @param result output result.
+ * @return 0 always
+ */
+static int exec_cudaLaunch(MHelperCommand_t command, MHelperResult_t *result)
+{
+    result->cudaError = cudaLaunch(command.args.cudaLaunch.func);
+
     result->id = command.id;
     result->type = command.type;
     result->internalError = 0;
     return 0;
+}
+
+/**
+ * Execute cudaDeviceSynchronize command.
+ * @param command command information.
+ * @param result output result.
+ * @return 0 always
+ */
+static int exec_cudaDeviceSynchronize(MHelperCommand_t command, MHelperResult_t *result)
+{
+    result->cudaError = cudaDeviceSynchronize();
+
+    result->id = command.id;
+    result->type = command.type;
+    result->internalError = 0;
+    return 0;
+}
+
+/**
+ * Execute cudaMalloc command.
+ * @param command command information.
+ * @param result output result.
+ * @return 0 always
+ */
+static int exec_cudaMalloc(MHelperCommand_t command, MHelperResult_t *result)
+{
+    result->cudaError = cudaMalloc(&(result->args.cudaMalloc.devPtr), command.args.cudaMalloc.size);
+
+    result->id = command.id;
+    result->type = command.type;
+    result->internalError = 0;
+    return 0;
+}
+
+/**
+ * Execute cudaFree command.
+ * @param command command information.
+ * @param result output result.
+ * @return 0 always
+ */
+static int exec_cudaFree(MHelperCommand_t command, MHelperResult_t *result)
+{
+    result->cudaError = cudaFree(command.args.cudaFree.devPtr);
+
+    result->id = command.id;
+    result->type = command.type;
+    result->internalError = 0;
+    return 0;
+}
+
+/**
+ * Execute cudaSetupArgument command.
+ * @param command command information.
+ * @param result output result.
+ * @return 0 on success; -1 otherwise.
+ */
+static int exec_cudaSetupArgument(MHelperCommand_t command, MHelperResult_t *result)
+{
+    MRCUDASharedMemLocalInfo_t *sharedMemInfo;
+
+    if ((sharedMemInfo = mhelper_mem_get(command.args.cudaSetupArgument.sharedMem)) == NULL)
+        goto __exec_cudaSetupArgument_err_0;
+    result->cudaError = cudaSetupArgument(
+        sharedMemInfo->startAddr,
+        command.args.cudaSetupArgument.size,
+        command.args.cudaSetupArgument.offset
+    );
+    result->id = command.id;
+    result->type = command.type;
+    result->internalError = 0;
+    mhelper_mem_free(sharedMemInfo);
+    return 0;
+
+__exec_cudaSetupArgument_err_0:
+    return -1;
+}
+
+/**
+ * Execute cudaConfigureCall command.
+ * @param command command information.
+ * @param result output result.
+ * @return 0 always
+ */
+static int exec_cudaConfigureCall(MHelperCommand_t command, MHelperResult_t *result)
+{
+    result->cudaError = cudaConfigureCall(
+        command.args.cudaConfigureCall.gridDim,
+        command.args.cudaConfigureCall.blockDim,
+        command.args.cudaConfigureCall.sharedMem,
+        command.args.cudaConfigureCall.stream
+    );
+
+    result->id = command.id;
+    result->type = command.type;
+    result->internalError = 0;
+    return 0;
+}
+
+/**
+ * Execute cudaGetLastError command.
+ * @param command command information.
+ * @param result output result.
+ * @return 0 always
+ */
+static int exec_cudaGetLastError(MHelperCommand_t command, MHelperResult_t *result)
+{
+    result->cudaError = cudaGetLastError();
+
+    result->id = command.id;
+    result->type = command.type;
+    result->internalError = 0;
+    return 0;
+}
+
+/**
+ * Execute cudaMemcpy command.
+ * @param command command information.
+ * @param result output result.
+ * @return 0 on success; -1 otherwise.
+ */
+static int exec_cudaMemcpy(MHelperCommand_t command, MHelperResult_t *result)
+{
+    MRCUDASharedMemLocalInfo_t *sharedMemInfo;
+
+    if (command.args.cudaMemcpy.kind == cudaMemcpyHostToDevice) {
+        if ((sharedMemInfo = mhelper_mem_get(command.args.cudaSetupArgument.sharedMem)) == NULL)
+            goto __exec_cudaMemcpy_err_0;
+        result->cudaError = cudaMemcpy(
+            command.args.cudaMemcpy.dst,
+            sharedMemInfo->startAddr,
+            command.args.cudaMemcpy.count,
+            command.args.cudaMemcpy.kind
+        );
+        mhelper_mem_free(sharedMemInfo);
+        result->internalError = 0;
+    }
+    else if (command.args.cudaMemcpy.kind == cudaMemcpyDeviceToHost) {
+        if ((sharedMemInfo = mhelper_mem_malloc(command.args.cudaMemcpy.count)) == NULL)
+            goto __exec_cudaMemcpy_err_1;
+        result->cudaError = cudaMemcpy(
+            sharedMemInfo->startAddr,
+            command.args.cudaMemcpy.src,
+            command.args.cudaMemcpy.count,
+            command.args.cudaMemcpy.kind
+        );
+        result->args.cudaMemcpy.sharedMem = sharedMemInfo->sharedMem;
+        result->internalError = 0;
+        mhelper_mem_detach(sharedMemInfo);
+    }
+    else
+        result->internalError = -3;
+
+    result->id = command.id;
+    result->type = command.type;
+    return 0;
+
+__exec_cudaMemcpy_err_1:
+    return -2;
+__exec_cudaMemcpy_err_0:
+    return -1;
 }
 
 /**
@@ -103,6 +337,24 @@ static int execute_command(MHelperCommand_t command, MHelperResult_t *result)
             return exec_cuCtxCreate(command, result);
         case MRCOMMAND_TYPE_CUDAREGISTERFATBINARY:
             return exec_cudaRegisterFatBinary(command, result);
+        case MRCOMMAND_TYPE_CUDAREGISTERFUNCTION:
+            return exec_cudaRegisterFunction(command, result);
+        case MRCOMMAND_TYPE_CUDALAUNCH:
+            return exec_cudaLaunch(command, result);
+        case MRCOMMAND_TYPE_CUDADEVICESYNCHRONIZE:
+            return exec_cudaDeviceSynchronize(command, result);
+        case MRCOMMAND_TYPE_CUDAMALLOC:
+            return exec_cudaMalloc(command, result);
+        case MRCOMMAND_TYPE_CUDAFREE:
+            return exec_cudaFree(command, result);
+        case MRCOMMAND_TYPE_CUDASETUPARGUMENT:
+            return exec_cudaSetupArgument(command, result);
+        case MRCOMMAND_TYPE_CUDACONFIGURECALL:
+            return exec_cudaConfigureCall(command, result);
+        case MRCOMMAND_TYPE_CUDAGETLASTERROR:
+            return exec_cudaGetLastError(command, result);
+        case MRCOMMAND_TYPE_CUDAMEMCPY:
+            return exec_cudaMemcpy(command, result);
     }
     return -1;
 }

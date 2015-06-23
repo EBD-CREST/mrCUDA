@@ -135,7 +135,7 @@ void mhelper_int_cudaRegisterVar_internal(MRCUDAGPU_t *mrcudaGPU, void **fatCubi
     MHelperProcess_t *mhelperProcess = mrcudaGPU->mhelperProcess;
     size_t hostVarSize = strlen(hostVar) + 1;
     size_t deviceAddressSize = strlen(deviceAddress) + 1;
-    size_t deviceNameSize = strlen(deviceName) + 1
+    size_t deviceNameSize = strlen(deviceName) + 1;
     MRCUDASharedMemLocalInfo_t *sharedMemInfo = __mhelper_mem_malloc_safe(hostVarSize + deviceAddressSize + deviceNameSize);
     void *addr = sharedMemInfo->startAddr;
 
@@ -151,9 +151,9 @@ void mhelper_int_cudaRegisterVar_internal(MRCUDAGPU_t *mrcudaGPU, void **fatCubi
     command.args.cudaRegisterVar.deviceName.offset = hostVarSize + deviceAddressSize;
     command.args.cudaRegisterVar.ext = ext;
     command.args.cudaRegisterVar.size = size;
-    command.args.cudaRegisterVar.constant = constant
+    command.args.cudaRegisterVar.constant = constant;
     command.args.cudaRegisterVar.global = global;
-    command.args.cudaRegisterVar.shminfo = sharedMemInfo->sharedMem;
+    command.args.cudaRegisterVar.sharedMem = sharedMemInfo->sharedMem;
     mhelper_mem_detach(sharedMemInfo);
     result = mhelper_call(mhelperProcess, command);
     free(sharedMemInfo);
@@ -440,7 +440,7 @@ cudaError_t mhelper_int_cudaMemcpyToSymbolAsync_internal(MRCUDAGPU_t *mrcudaGPU,
     command.args.cudaMemcpyToSymbol.stream = stream;
     command.args.cudaMemcpyToSymbol.sharedMem = sharedMemInfo->sharedMem;
     mhelper_mem_detach(sharedMemInfo);
-    result = mhelper(mhelperProcess, command);
+    result = mhelper_call(mhelperProcess, command);
     free(sharedMemInfo);
     if (result.internalError != 0)
         REPORT_ERROR_AND_EXIT("mhelper encountered an error during cudaMemcpyToSymbolAsync execution.\n");
@@ -478,7 +478,7 @@ cudaError_t mhelper_int_cudaMemcpyFromSymbolAsync_internal(MRCUDAGPU_t *mrcudaGP
     command.args.cudaMemcpyFromSymbol.stream = stream;
     command.args.cudaMemcpyFromSymbol.sharedMem = sharedMemInfo->sharedMem;
     mhelper_mem_detach(sharedMemInfo);
-    result = mhelper(mhelperProcess, command);
+    result = mhelper_call(mhelperProcess, command);
     free(sharedMemInfo);
     if (result.internalError != 0)
         REPORT_ERROR_AND_EXIT("mhelper encountered an error during cudaMemcpyFromSymbolAsync execution.\n");
@@ -517,7 +517,7 @@ cudaError_t mhelper_int_cudaSetupArgument_internal(MRCUDAGPU_t *mrcudaGPU, const
     command.args.cudaSetupArgument.offset = offset;
     command.args.cudaSetupArgument.sharedMem = sharedMemInfo->sharedMem;
     mhelper_mem_detach(sharedMemInfo);
-    result = mhelper(mhelperProcess, command);
+    result = mhelper_call(mhelperProcess, command);
     free(sharedMemInfo);
     if (result.internalError != 0)
         REPORT_ERROR_AND_EXIT("mhelper encountered an error during cudaSetupArgument execution.\n");
@@ -594,7 +594,7 @@ cudaError_t mhelper_int_cudaGetLastError_internal(MRCUDAGPU_t *mrcudaGPU)
 
 cudaError_t mhelper_int_cudaMemcpy(void *dst, const void *src, size_t count, enum cudaMemcpyKind kind)
 {
-    return mhelper_int_cudaMemcpy(
+    return mhelper_int_cudaMemcpy_internal(
         mrcuda_get_current_gpu(),
         dst,
         src,
@@ -630,7 +630,7 @@ cudaError_t mhelper_int_cudaMemcpy_internal(MRCUDAGPU_t *mrcudaGPU, void *dst, c
 
     if (kind == cudaMemcpyHostToDevice)
         mhelper_mem_detach(sharedMemInfo);
-    result = mhelper(mhelperProcess, command);
+    result = mhelper_call(mhelperProcess, command);
     if (kind == cudaMemcpyHostToDevice)
         free(sharedMemInfo);
     if (result.internalError != 0)
