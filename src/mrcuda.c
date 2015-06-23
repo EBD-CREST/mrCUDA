@@ -55,7 +55,7 @@ GHashTable *mrcudaGPUThreadMap = NULL;
 static inline int __init_mrcuda_gpu_thread_map()
 {
     if (mrcudaGPUThreadMap == NULL)
-        mrcudaGPUThreadMap = g_hash_table_new(g_int_hash, g_int_equal);
+        mrcudaGPUThreadMap = g_hash_table_new(g_direct_hash, g_direct_equal);
     return mrcudaGPUThreadMap == NULL ? -1 : 0;
 }
 
@@ -78,9 +78,9 @@ MRCUDAGPU_t *mrcuda_get_current_gpu()
     MRCUDAGPU_t *mrcudaGPU;
     __init_mrcuda_gpu_thread_map();
     tid = gettid();
-    if ((mrcudaGPU = g_hash_table_lookup(mrcudaGPUThreadMap, &tid)) == NULL) {
+    if ((mrcudaGPU = g_hash_table_lookup(mrcudaGPUThreadMap, GINT_TO_POINTER(tid))) == NULL) {
         mrcudaGPU = mrcudaGPUList;
-        g_hash_table_insert(mrcudaGPUThreadMap, &tid, mrcudaGPU);
+        g_hash_table_insert(mrcudaGPUThreadMap, GINT_TO_POINTER(tid), mrcudaGPU);
     }
     return mrcudaGPU;
 }
@@ -94,7 +94,7 @@ void mrcuda_set_current_gpu(int device)
     pid_t tid;
     mrcuda_get_current_gpu();
     tid = gettid();
-    g_hash_table_replace(mrcudaGPUThreadMap, &tid, &(mrcudaGPUList[device]));
+    g_hash_table_replace(mrcudaGPUThreadMap, GINT_TO_POINTER(tid), &(mrcudaGPUList[device]));
 }
 
 
@@ -468,7 +468,7 @@ void mrcuda_switch(MRCUDAGPU_t *mrcudaGPU, int toGPUNumber)
         else {
             // Set up rCUDA-to-helper migration.
             mrcudaGPU->status = MRCUDA_GPU_STATUS_HELPER;
-            if ((mrcudaGPU->mhelperProcess = mhelper_create(mrcudaGPU, __helperPath, toGPUNumber)) == NULL)
+            if (mhelper_create(mrcudaGPU, __helperPath, toGPUNumber) == NULL)
                 REPORT_ERROR_AND_EXIT("Something went wrong in mhelper_create.\n");
             mrcudaGPU->defaultHandler = mrcudaGPU->mhelperProcess->handle;
         }
@@ -481,7 +481,7 @@ void mrcuda_switch(MRCUDAGPU_t *mrcudaGPU, int toGPUNumber)
         
         // Waiting for everything to be stable on rCUDA side.
         mrcudaSymRCUDA->mrcudaSetDevice(mrcudaGPU->virtualNumber);
-        mrcudaSymRCUDA->mrcudaDeviceSynchronize();
+        //mrcudaSymRCUDA->mrcudaDeviceSynchronize();
 
         // Replay recorded commands.
         record = mrcudaGPU->mrecordGPU->mrcudaRecordHeadPtr;

@@ -5,10 +5,192 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <fatBinaryCtl.h>
+#include <dlfcn.h>
+#include <string.h>
 
 #include "common.h"
 #include "datatypes.h"
 #include "intercomm_mem.h"
+
+#define __NVIDIA_LIBRARY_PATH_ENV_NAME__ "MRCUDA_NVIDIA_LIB_PATH"
+
+MRCUDASym_t *mrcudaSymNvidia;
+
+/**
+ * Try to link the specified symbol to the handle.
+ * Print error and terminate the program if an error occurs.
+ * @param handle a handle returned from dlopen.
+ * @param symbol a symbol to be linked to the handle.
+ * @return a pointer to the linked symbol.
+ */
+static inline void *__safe_dlsym(void *handle, const char *symbol)
+{
+    char *error;
+    void *ret_handle = dlsym(handle, symbol);
+    
+    if((error = dlerror()) != NULL)
+        REPORT_ERROR_AND_EXIT("%s\n", error);
+
+    return ret_handle;
+}
+
+/**
+ * Symlink functions of the handle.
+ * @param mrcudaSym handle to be sym-linked.
+ */
+static void __symlink_handle(MRCUDASym_t *mrcudaSym)
+{
+    mrcudaSym->mrcudaDeviceReset = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaDeviceReset");
+    mrcudaSym->mrcudaDeviceSynchronize = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaDeviceSynchronize");
+    mrcudaSym->mrcudaDeviceSetLimit = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaDeviceSetLimit");
+    mrcudaSym->mrcudaDeviceGetLimit = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaDeviceGetLimit");
+    mrcudaSym->mrcudaDeviceGetCacheConfig = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaDeviceGetCacheConfig");
+    mrcudaSym->mrcudaDeviceSetCacheConfig = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaDeviceSetCacheConfig");
+    mrcudaSym->mrcudaDeviceGetSharedMemConfig = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaDeviceGetSharedMemConfig");
+    mrcudaSym->mrcudaDeviceSetSharedMemConfig = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaDeviceSetSharedMemConfig");
+    mrcudaSym->mrcudaDeviceGetByPCIBusId = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaDeviceGetByPCIBusId");
+    mrcudaSym->mrcudaDeviceGetPCIBusId = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaDeviceGetPCIBusId");
+    mrcudaSym->mrcudaIpcGetEventHandle = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaIpcGetEventHandle");
+    mrcudaSym->mrcudaIpcOpenEventHandle = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaIpcOpenEventHandle");
+    mrcudaSym->mrcudaIpcGetMemHandle = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaIpcGetMemHandle");
+    mrcudaSym->mrcudaIpcOpenMemHandle = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaIpcOpenMemHandle");
+    mrcudaSym->mrcudaIpcCloseMemHandle = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaIpcCloseMemHandle");
+    mrcudaSym->mrcudaThreadExit = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaThreadExit");
+    mrcudaSym->mrcudaThreadSynchronize = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaThreadSynchronize");
+    mrcudaSym->mrcudaThreadSetLimit = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaThreadSetLimit");
+    mrcudaSym->mrcudaThreadGetLimit = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaThreadGetLimit");
+    mrcudaSym->mrcudaThreadGetCacheConfig = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaThreadGetCacheConfig");
+    mrcudaSym->mrcudaThreadSetCacheConfig = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaThreadSetCacheConfig");
+    mrcudaSym->mrcudaGetLastError = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGetLastError");
+    mrcudaSym->mrcudaPeekAtLastError = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaPeekAtLastError");
+    mrcudaSym->mrcudaGetErrorString = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGetErrorString");
+    mrcudaSym->mrcudaGetDeviceCount = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGetDeviceCount");
+    mrcudaSym->mrcudaGetDeviceProperties = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGetDeviceProperties");
+    mrcudaSym->mrcudaDeviceGetAttribute = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaDeviceGetAttribute");
+    mrcudaSym->mrcudaChooseDevice = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaChooseDevice");
+    mrcudaSym->mrcudaSetDevice = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaSetDevice");
+    mrcudaSym->mrcudaGetDevice = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGetDevice");
+    mrcudaSym->mrcudaSetValidDevices = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaSetValidDevices");
+    mrcudaSym->mrcudaSetDeviceFlags = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaSetDeviceFlags");
+    mrcudaSym->mrcudaStreamCreate = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaStreamCreate");
+    mrcudaSym->mrcudaStreamCreateWithFlags = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaStreamCreateWithFlags");
+    mrcudaSym->mrcudaStreamDestroy = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaStreamDestroy");
+    mrcudaSym->mrcudaStreamWaitEvent = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaStreamWaitEvent");
+    mrcudaSym->mrcudaStreamAddCallback = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaStreamAddCallback");
+    mrcudaSym->mrcudaStreamSynchronize = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaStreamSynchronize");
+    mrcudaSym->mrcudaStreamQuery = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaStreamQuery");
+    mrcudaSym->mrcudaEventCreate = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaEventCreate");
+    mrcudaSym->mrcudaEventCreateWithFlags = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaEventCreateWithFlags");
+    mrcudaSym->mrcudaEventRecord = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaEventRecord");
+    mrcudaSym->mrcudaEventQuery = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaEventQuery");
+    mrcudaSym->mrcudaEventSynchronize = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaEventSynchronize");
+    mrcudaSym->mrcudaEventDestroy = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaEventDestroy");
+    mrcudaSym->mrcudaEventElapsedTime = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaEventElapsedTime");
+    mrcudaSym->mrcudaConfigureCall = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaConfigureCall");
+    mrcudaSym->mrcudaSetupArgument = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaSetupArgument");
+    mrcudaSym->mrcudaFuncSetCacheConfig = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaFuncSetCacheConfig");
+    mrcudaSym->mrcudaFuncSetSharedMemConfig = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaFuncSetSharedMemConfig");
+    mrcudaSym->mrcudaLaunch = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaLaunch");
+    mrcudaSym->mrcudaFuncGetAttributes = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaFuncGetAttributes");
+    mrcudaSym->mrcudaSetDoubleForDevice = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaSetDoubleForDevice");
+    mrcudaSym->mrcudaSetDoubleForHost = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaSetDoubleForHost");
+    mrcudaSym->mrcudaMalloc = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMalloc");
+    mrcudaSym->mrcudaMallocHost = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMallocHost");
+    mrcudaSym->mrcudaMallocPitch = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMallocPitch");
+    mrcudaSym->mrcudaMallocArray = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMallocArray");
+    mrcudaSym->mrcudaFree = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaFree");
+    mrcudaSym->mrcudaFreeHost = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaFreeHost");
+    mrcudaSym->mrcudaFreeArray = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaFreeArray");
+    mrcudaSym->mrcudaFreeMipmappedArray = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaFreeMipmappedArray");
+    mrcudaSym->mrcudaHostAlloc = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaHostAlloc");
+    mrcudaSym->mrcudaHostRegister = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaHostRegister");
+    mrcudaSym->mrcudaHostUnregister = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaHostUnregister");
+    mrcudaSym->mrcudaHostGetDevicePointer = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaHostGetDevicePointer");
+    mrcudaSym->mrcudaHostGetFlags = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaHostGetFlags");
+    mrcudaSym->mrcudaMalloc3D = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMalloc3D");
+    mrcudaSym->mrcudaMalloc3DArray = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMalloc3DArray");
+    mrcudaSym->mrcudaMallocMipmappedArray = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMallocMipmappedArray");
+    mrcudaSym->mrcudaGetMipmappedArrayLevel = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGetMipmappedArrayLevel");
+    mrcudaSym->mrcudaMemcpy3D = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpy3D");
+    mrcudaSym->mrcudaMemcpy3DPeer = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpy3DPeer");
+    mrcudaSym->mrcudaMemcpy3DAsync = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpy3DAsync");
+    mrcudaSym->mrcudaMemcpy3DPeerAsync = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpy3DPeerAsync");
+    mrcudaSym->mrcudaMemGetInfo = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemGetInfo");
+    mrcudaSym->mrcudaArrayGetInfo = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaArrayGetInfo");
+    mrcudaSym->mrcudaMemcpy = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpy");
+    mrcudaSym->mrcudaMemcpyPeer = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpyPeer");
+    mrcudaSym->mrcudaMemcpyToArray = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpyToArray");
+    mrcudaSym->mrcudaMemcpyFromArray = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpyFromArray");
+    mrcudaSym->mrcudaMemcpyArrayToArray = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpyArrayToArray");
+    mrcudaSym->mrcudaMemcpy2D = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpy2D");
+    mrcudaSym->mrcudaMemcpy2DToArray = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpy2DToArray");
+    mrcudaSym->mrcudaMemcpy2DFromArray = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpy2DFromArray");
+    mrcudaSym->mrcudaMemcpy2DArrayToArray = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpy2DArrayToArray");
+    mrcudaSym->mrcudaMemcpyToSymbol = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpyToSymbol");
+    mrcudaSym->mrcudaMemcpyFromSymbol = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpyFromSymbol");
+    mrcudaSym->mrcudaMemcpyAsync = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpyAsync");
+    mrcudaSym->mrcudaMemcpyPeerAsync = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpyPeerAsync");
+    mrcudaSym->mrcudaMemcpyToArrayAsync = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpyToArrayAsync");
+    mrcudaSym->mrcudaMemcpyFromArrayAsync = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpyFromArrayAsync");
+    mrcudaSym->mrcudaMemcpy2DAsync = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpy2DAsync");
+    mrcudaSym->mrcudaMemcpy2DToArrayAsync = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpy2DToArrayAsync");
+    mrcudaSym->mrcudaMemcpy2DFromArrayAsync = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpy2DFromArrayAsync");
+    mrcudaSym->mrcudaMemcpyToSymbolAsync = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpyToSymbolAsync");
+    mrcudaSym->mrcudaMemcpyFromSymbolAsync = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemcpyFromSymbolAsync");
+    mrcudaSym->mrcudaMemset = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemset");
+    mrcudaSym->mrcudaMemset2D = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemset2D");
+    mrcudaSym->mrcudaMemset3D = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemset3D");
+    mrcudaSym->mrcudaMemsetAsync = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemsetAsync");
+    mrcudaSym->mrcudaMemset2DAsync = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemset2DAsync");
+    mrcudaSym->mrcudaMemset3DAsync = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaMemset3DAsync");
+    mrcudaSym->mrcudaGetSymbolAddress = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGetSymbolAddress");
+    mrcudaSym->mrcudaGetSymbolSize = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGetSymbolSize");
+    mrcudaSym->mrcudaPointerGetAttributes = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaPointerGetAttributes");
+    mrcudaSym->mrcudaDeviceCanAccessPeer = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaDeviceCanAccessPeer");
+    mrcudaSym->mrcudaDeviceEnablePeerAccess = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaDeviceEnablePeerAccess");
+    mrcudaSym->mrcudaDeviceDisablePeerAccess = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaDeviceDisablePeerAccess");
+    /*mrcudaSym->mrcudaGraphicsUnregisterResource = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGraphicsUnregisterResource");
+    mrcudaSym->mrcudaGraphicsResourceSetMapFlags = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGraphicsResourceSetMapFlags");
+    mrcudaSym->mrcudaGraphicsMapResources = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGraphicsMapResources");
+    mrcudaSym->mrcudaGraphicsUnmapResources = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGraphicsUnmapResources");
+    mrcudaSym->mrcudaGraphicsResourceGetMappedPointer = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGraphicsResourceGetMappedPointer");
+    mrcudaSym->mrcudaGraphicsSubResourceGetMappedArray = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGraphicsSubResourceGetMappedArray");
+    mrcudaSym->mrcudaGraphicsResourceGetMappedMipmappedArray = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGraphicsResourceGetMappedMipmappedArray");*/
+    mrcudaSym->mrcudaGetChannelDesc = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGetChannelDesc");
+    mrcudaSym->mrcudaCreateChannelDesc = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaCreateChannelDesc");
+    mrcudaSym->mrcudaBindTexture = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaBindTexture");
+    mrcudaSym->mrcudaBindTexture2D = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaBindTexture2D");
+    mrcudaSym->mrcudaBindTextureToArray = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaBindTextureToArray");
+    mrcudaSym->mrcudaBindTextureToMipmappedArray = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaBindTextureToMipmappedArray");
+    mrcudaSym->mrcudaUnbindTexture = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaUnbindTexture");
+    mrcudaSym->mrcudaGetTextureAlignmentOffset = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGetTextureAlignmentOffset");
+    mrcudaSym->mrcudaGetTextureReference = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGetTextureReference");
+    mrcudaSym->mrcudaBindSurfaceToArray = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaBindSurfaceToArray");
+    mrcudaSym->mrcudaGetSurfaceReference = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGetSurfaceReference");
+    mrcudaSym->mrcudaCreateTextureObject = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaCreateTextureObject");
+    mrcudaSym->mrcudaDestroyTextureObject = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaDestroyTextureObject");
+    mrcudaSym->mrcudaGetTextureObjectResourceDesc = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGetTextureObjectResourceDesc");
+    mrcudaSym->mrcudaGetTextureObjectTextureDesc = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGetTextureObjectTextureDesc");
+    mrcudaSym->mrcudaGetTextureObjectResourceViewDesc = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGetTextureObjectResourceViewDesc");
+    mrcudaSym->mrcudaCreateSurfaceObject = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaCreateSurfaceObject");
+    mrcudaSym->mrcudaDestroySurfaceObject = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaDestroySurfaceObject");
+    mrcudaSym->mrcudaGetSurfaceObjectResourceDesc = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGetSurfaceObjectResourceDesc");
+    mrcudaSym->mrcudaDriverGetVersion = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaDriverGetVersion");
+    mrcudaSym->mrcudaRuntimeGetVersion = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaRuntimeGetVersion");
+    mrcudaSym->mrcudaGetExportTable = __safe_dlsym(mrcudaSym->handler.symHandler, "cudaGetExportTable");
+    mrcudaSym->__mrcudaRegisterFatBinary = __safe_dlsym(mrcudaSym->handler.symHandler, "__cudaRegisterFatBinary");
+    mrcudaSym->__mrcudaUnregisterFatBinary = __safe_dlsym(mrcudaSym->handler.symHandler, "__cudaUnregisterFatBinary");
+    mrcudaSym->__mrcudaRegisterVar = __safe_dlsym(mrcudaSym->handler.symHandler, "__cudaRegisterVar");
+    mrcudaSym->__mrcudaRegisterTexture = __safe_dlsym(mrcudaSym->handler.symHandler, "__cudaRegisterTexture");
+    mrcudaSym->__mrcudaRegisterSurface = __safe_dlsym(mrcudaSym->handler.symHandler, "__cudaRegisterSurface");
+    mrcudaSym->__mrcudaRegisterFunction = __safe_dlsym(mrcudaSym->handler.symHandler, "__cudaRegisterFunction");
+    //mrcudaSym->__mrcudaRegisterShared = __safe_dlsym(mrcudaSym->handler.symHandler, "__cudaRegisterShared");
+    //mrcudaSym->__mrcudaRegisterSharedVar = __safe_dlsym(mrcudaSym->handler.symHandler, "__cudaRegisterSharedVar");
+    //mrcudaSym->__mrcudaSynchronizeThreads = __safe_dlsym(mrcudaSym->handler.symHandler, "__cudaSynchronizeThreads");
+    //mrcudaSym->__mrcudaTextureFetch = __safe_dlsym(mrcudaSym->handler.symHandler, "__cudaTextureFetch");
+    //mrcudaSym->__mrcudaMutexOperation = __safe_dlsym(mrcudaSym->handler.symHandler, "__cudaMutexOperation");
+    //mrcudaSym->__mrcudaRegisterDeviceFunction = __safe_dlsym(mrcudaSym->handler.symHandler, "__cudaRegisterDeviceFunction");
+}
 
 extern void** CUDARTAPI __cudaRegisterFatBinary(
   void *fatCubin
@@ -50,7 +232,7 @@ static int exec_cudaRegisterFatBinary(MHelperCommand_t command, MHelperResult_t 
         goto __exec_cudaRegisterFatBinary_err_0;
     fatCubinWrapper = sharedMemInfo->startAddr;
     fatCubinWrapper->data = sharedMemInfo->startAddr + sizeof(__fatBinC_Wrapper_t);
-    fatCubinHandle = __cudaRegisterFatBinary(fatCubinWrapper);
+    fatCubinHandle = mrcudaSymNvidia->__mrcudaRegisterFatBinary(fatCubinWrapper);
     result->id = command.id;
     result->type = command.type;
     result->internalError = 0;
@@ -71,7 +253,7 @@ __exec_cudaRegisterFatBinary_err_0:
  */
 static int exec_cudaUnregisterFatBinary(MHelperCommand_t command, MHelperResult_t *result)
 {
-    __cudaUnregisterFatBinary(command.args.cudaUnregisterFatBinary.fatCubinHandle);
+    mrcudaSymNvidia->__mrcudaUnregisterFatBinary(command.args.cudaUnregisterFatBinary.fatCubinHandle);
     result->id = command.id;
     result->type = command.type;
     result->internalError = 0;
@@ -91,7 +273,7 @@ static int exec_cudaRegisterFunction(MHelperCommand_t command, MHelperResult_t *
 
     if ((sharedMemInfo = mhelper_mem_get(command.args.cudaRegisterFunction.sharedMem)) == NULL)
         goto __exec_cudaRegisterFunction_err_0;
-    __cudaRegisterFunction(
+    mrcudaSymNvidia->__mrcudaRegisterFunction(
         command.args.cudaRegisterFunction.fatCubinHandle,
         (char *)(sharedMemInfo->startAddr + command.args.cudaRegisterFunction.hostFun.offset),
         (char *)(sharedMemInfo->startAddr + command.args.cudaRegisterFunction.deviceFun.offset),
@@ -122,7 +304,7 @@ __exec_cudaRegisterFunction_err_0:
  */
 static int exec_cudaLaunch(MHelperCommand_t command, MHelperResult_t *result)
 {
-    result->cudaError = cudaLaunch(command.args.cudaLaunch.func);
+    result->cudaError = mrcudaSymNvidia->mrcudaLaunch(command.args.cudaLaunch.func);
 
     result->id = command.id;
     result->type = command.type;
@@ -138,7 +320,7 @@ static int exec_cudaLaunch(MHelperCommand_t command, MHelperResult_t *result)
  */
 static int exec_cudaDeviceSynchronize(MHelperCommand_t command, MHelperResult_t *result)
 {
-    result->cudaError = cudaDeviceSynchronize();
+    result->cudaError = mrcudaSymNvidia->mrcudaDeviceSynchronize();
 
     result->id = command.id;
     result->type = command.type;
@@ -154,7 +336,7 @@ static int exec_cudaDeviceSynchronize(MHelperCommand_t command, MHelperResult_t 
  */
 static int exec_cudaMalloc(MHelperCommand_t command, MHelperResult_t *result)
 {
-    result->cudaError = cudaMalloc(&(result->args.cudaMalloc.devPtr), command.args.cudaMalloc.size);
+    result->cudaError = mrcudaSymNvidia->mrcudaMalloc(&(result->args.cudaMalloc.devPtr), command.args.cudaMalloc.size);
 
     result->id = command.id;
     result->type = command.type;
@@ -170,7 +352,7 @@ static int exec_cudaMalloc(MHelperCommand_t command, MHelperResult_t *result)
  */
 static int exec_cudaFree(MHelperCommand_t command, MHelperResult_t *result)
 {
-    result->cudaError = cudaFree(command.args.cudaFree.devPtr);
+    result->cudaError = mrcudaSymNvidia->mrcudaFree(command.args.cudaFree.devPtr);
 
     result->id = command.id;
     result->type = command.type;
@@ -190,7 +372,7 @@ static int exec_cudaSetupArgument(MHelperCommand_t command, MHelperResult_t *res
 
     if ((sharedMemInfo = mhelper_mem_get(command.args.cudaSetupArgument.sharedMem)) == NULL)
         goto __exec_cudaSetupArgument_err_0;
-    result->cudaError = cudaSetupArgument(
+    result->cudaError = mrcudaSymNvidia->mrcudaSetupArgument(
         sharedMemInfo->startAddr,
         command.args.cudaSetupArgument.size,
         command.args.cudaSetupArgument.offset
@@ -213,7 +395,7 @@ __exec_cudaSetupArgument_err_0:
  */
 static int exec_cudaConfigureCall(MHelperCommand_t command, MHelperResult_t *result)
 {
-    result->cudaError = cudaConfigureCall(
+    result->cudaError = mrcudaSymNvidia->mrcudaConfigureCall(
         command.args.cudaConfigureCall.gridDim,
         command.args.cudaConfigureCall.blockDim,
         command.args.cudaConfigureCall.sharedMem,
@@ -234,7 +416,7 @@ static int exec_cudaConfigureCall(MHelperCommand_t command, MHelperResult_t *res
  */
 static int exec_cudaGetLastError(MHelperCommand_t command, MHelperResult_t *result)
 {
-    result->cudaError = cudaGetLastError();
+    result->cudaError = mrcudaSymNvidia->mrcudaGetLastError();
 
     result->id = command.id;
     result->type = command.type;
@@ -255,7 +437,7 @@ static int exec_cudaMemcpy(MHelperCommand_t command, MHelperResult_t *result)
     if (command.args.cudaMemcpy.kind == cudaMemcpyHostToDevice) {
         if ((sharedMemInfo = mhelper_mem_get(command.args.cudaSetupArgument.sharedMem)) == NULL)
             goto __exec_cudaMemcpy_err_0;
-        result->cudaError = cudaMemcpy(
+        result->cudaError = mrcudaSymNvidia->mrcudaMemcpy(
             command.args.cudaMemcpy.dst,
             sharedMemInfo->startAddr,
             command.args.cudaMemcpy.count,
@@ -267,7 +449,7 @@ static int exec_cudaMemcpy(MHelperCommand_t command, MHelperResult_t *result)
     else if (command.args.cudaMemcpy.kind == cudaMemcpyDeviceToHost) {
         if ((sharedMemInfo = mhelper_mem_malloc(command.args.cudaMemcpy.count)) == NULL)
             goto __exec_cudaMemcpy_err_1;
-        result->cudaError = cudaMemcpy(
+        result->cudaError = mrcudaSymNvidia->mrcudaMemcpy(
             sharedMemInfo->startAddr,
             command.args.cudaMemcpy.src,
             command.args.cudaMemcpy.count,
@@ -307,16 +489,11 @@ void sig_handler(int signum)
 static int receive_command(MHelperCommand_t *command)
 {
     size_t n;
-    size_t remainingSize = sizeof(MHelperCommand_t);
     char *buf = (char *)command;
 
-    while (remainingSize > 0) {
-        n = fread(buf, remainingSize, 1, stdin);
-        if (n < 0)
-            goto __receive_command_err_0;
-        remainingSize -= n;
-        buf += n;
-    }
+    n = fread(buf, sizeof(MHelperCommand_t), 1, stdin);
+    if (n != 1)
+        goto __receive_command_err_0;
     return 0;
 
 __receive_command_err_0:
@@ -367,16 +544,13 @@ static int execute_command(MHelperCommand_t command, MHelperResult_t *result)
 static int sendback_result(MHelperResult_t result)
 {
     size_t n;
-    size_t remainingSize = sizeof(MHelperResult_t);
     char *buf = (char *)&result;
 
-    while (remainingSize > 0) {
-        n = fwrite(buf, remainingSize, 1, stdout);
-        if (n < 0)
-            goto __sendback_result_err_0;
-        remainingSize -= n;
-        buf += n;
-    }
+    n = fwrite(buf, sizeof(MHelperResult_t), 1, stdout);
+    if (n != 1)
+        goto __sendback_result_err_0;
+    fflush(stdout);
+    return 0;
 
 __sendback_result_err_0:
     return -1;
@@ -409,12 +583,27 @@ static void run_forever(void)
 int main(int argc, char **argv)
 {
     char *endptr;
+    char *__nvidiaLibPath;
 
-    if (argc != 2)
-        REPORT_ERROR_AND_EXIT("The number of arguments should be exactly two.\n");
+    if (argc < 2)
+        REPORT_ERROR_AND_EXIT("The number of arguments should be two.\n");
     gpuID = (int)strtol(argv[1], &endptr, 10);
     if (*endptr != '\0')
         REPORT_ERROR_AND_EXIT("The GPU ID argument is invalid.\n");
+
+    __nvidiaLibPath = getenv(__NVIDIA_LIBRARY_PATH_ENV_NAME__);
+    if (__nvidiaLibPath == NULL || strlen(__nvidiaLibPath) == 0)
+        REPORT_ERROR_AND_EXIT("%s is not specified.\n", __NVIDIA_LIBRARY_PATH_ENV_NAME__);
+
+    if ((mrcudaSymNvidia = malloc(sizeof(MRCUDASym_t))) == NULL)
+        REPORT_ERROR_AND_EXIT("Cannot allocate space for mrcudaSymNvidia.\n");
+    
+    // Create handles for CUDA libraries.
+    mrcudaSymNvidia->handler.symHandler = dlopen(__nvidiaLibPath, RTLD_NOW | RTLD_GLOBAL);
+    if (mrcudaSymNvidia->handler.symHandler == NULL)
+        REPORT_ERROR_AND_EXIT("Cannot sym-link mrcudaSymNvidia.\n");
+
+    __symlink_handle(mrcudaSymNvidia);
 
     if (signal(SIGQUIT, sig_handler) == SIG_ERR)
         REPORT_ERROR_AND_EXIT("Cannot register the signal handler.\n");

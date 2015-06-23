@@ -5,6 +5,8 @@ import os
 import subprocess
 from optparse import OptionParser
 
+framework_directory = os.path.dirname(os.path.abspath(__file__))
+
 def parse_args():
     parser = OptionParser(usage = '%prog -s SERVER [options] -- PROGRAM')
     parser.add_option('-t', '--network-type', dest = 'network_type',
@@ -52,8 +54,8 @@ def parse_args():
     )
     parser.add_option('--mhelper-path',
         dest = 'mhelper_path',
-        default = '/dev/null',
-        help = 'mhelper\'s path [default = /dev/null]'
+        default = os.path.join(framework_directory, 'mhelper'),
+        help = 'mhelper\'s path [default = %s]' % (os.path.join(framework_directory, 'mhelper'),)
     )
 
     options, args = parser.parse_args()
@@ -71,7 +73,6 @@ def parse_args():
     return options, args
 
 def main(options, args):
-    framework_directory = os.path.dirname(os.path.abspath(__file__))
     framework_lib_directory = os.path.join(framework_directory, 'lib64') 
     ld_lib_path = framework_lib_directory
 

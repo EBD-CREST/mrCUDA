@@ -35,6 +35,24 @@ int mhelper_int_init(MRCUDASym_t **handler, MHelperProcess_t *process)
         goto __mhelper_int_init_err_0;
     (*handler)->handler.processHandler = process;
     (*handler)->__mrcudaRegisterFatBinary = mhelper_int_cudaRegisterFatBinary;
+    (*handler)->__mrcudaRegisterVar = mhelper_int_cudaRegisterVar;
+    (*handler)->__mrcudaRegisterTexture = mhelper_int_cudaRegisterTexture;
+    (*handler)->__mrcudaRegisterFunction = mhelper_int_cudaRegisterFunction;
+    (*handler)->mrcudaLaunch = mhelper_int_cudaLaunch;
+    (*handler)->mrcudaHostAlloc = mhelper_int_cudaHostAlloc;
+    (*handler)->mrcudaDeviceReset = mhelper_int_cudaDeviceReset;
+    (*handler)->mrcudaDeviceSynchronize = mhelper_int_cudaDeviceSynchronize;
+    (*handler)->mrcudaGetDeviceProperties = mhelper_int_cudaGetDeviceProperties;
+    (*handler)->mrcudaMalloc = mhelper_int_cudaMalloc;
+    (*handler)->mrcudaFreeHost = mhelper_int_cudaFreeHost;
+    (*handler)->mrcudaFree = mhelper_int_cudaFree;
+    (*handler)->mrcudaMemcpyToSymbolAsync = mhelper_int_cudaMemcpyToSymbolAsync;
+    (*handler)->mrcudaMemcpyFromSymbolAsync = mhelper_int_cudaMemcpyFromSymbolAsync;
+    (*handler)->mrcudaSetupArgument = mhelper_int_cudaSetupArgument;
+    (*handler)->mrcudaStreamSynchronize = mhelper_int_cudaStreamSynchronize;
+    (*handler)->mrcudaConfigureCall = mhelper_int_cudaConfigureCall;
+    (*handler)->mrcudaGetLastError = mhelper_int_cudaGetLastError;
+    (*handler)->mrcudaMemcpy = mhelper_int_cudaMemcpy;
     return 0;
 
 __mhelper_int_init_err_0:

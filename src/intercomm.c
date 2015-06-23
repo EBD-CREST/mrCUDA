@@ -46,6 +46,8 @@ MHelperProcess_t *mhelper_create(MRCUDAGPU_t *mrcudaGPU, const char *helperProgP
         mhelperProcess->readPipe = rPipePair[0];
         mhelperProcess->writePipe = wPipePair[1];
         mhelperProcess->pid = pid;
+        if (mhelper_int_init(&(mhelperProcess->handle), mhelperProcess) != 0)
+            goto __mhelper_create_err_3;
         mrcudaGPU->mhelperProcess = mhelperProcess;
         return mhelperProcess;
     }
