@@ -81,5 +81,8 @@ cudaError_t mhelper_int_cudaGetLastError_internal(MRCUDAGPU_t *mrcudaGPU);
 cudaError_t mhelper_int_cudaMemcpy(void *dst, const void *src, size_t count, enum cudaMemcpyKind kind);
 cudaError_t mhelper_int_cudaMemcpy_internal(MRCUDAGPU_t *mrcudaGPU, void *dst, const void *src, size_t count, enum cudaMemcpyKind kind);
 
+cudaError_t mhelper_int_cudaSetDevice(int device);
+cudaError_t mhelper_int_cudaSetDevice_internal(MRCUDAGPU_t *mrcudaGPU, int device);
+
 #endif /* __MRCUDA_INTERCOMM_INTERFACE__HEADER__ */
 

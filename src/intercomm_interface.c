@@ -53,6 +53,7 @@ int mhelper_int_init(MRCUDASym_t **handler, MHelperProcess_t *process)
     (*handler)->mrcudaConfigureCall = mhelper_int_cudaConfigureCall;
     (*handler)->mrcudaGetLastError = mhelper_int_cudaGetLastError;
     (*handler)->mrcudaMemcpy = mhelper_int_cudaMemcpy;
+    (*handler)->mrcudaSetDevice = mhelper_int_cudaSetDevice;
     return 0;
 
 __mhelper_int_init_err_0:
@@ -659,6 +660,29 @@ cudaError_t mhelper_int_cudaMemcpy_internal(MRCUDAGPU_t *mrcudaGPU, void *dst, c
         memcpy(dst, sharedMemInfo->startAddr, count);
         mhelper_mem_free(sharedMemInfo);
     }
+    return result.cudaError;
+}
+
+cudaError_t mhelper_int_cudaSetDevice(int device)
+{
+    return mhelper_int_cudaSetDevice_internal(mrcuda_get_current_gpu(), device);
+}
+
+cudaError_t mhelper_int_cudaSetDevice_internal(MRCUDAGPU_t *mrcudaGPU, int device)
+{
+    MHelperCommand_t command;
+    MHelperResult_t result;
+    MHelperProcess_t *mhelperProcess = mrcudaGPU->mhelperProcess;
+
+    command.id = mhelper_generate_command_id(mrcudaGPU);
+    command.type = MRCOMMAND_TYPE_CUDASETDEVICE;
+    command.args.cudaSetDevice.device = device;
+
+    result = mhelper_call(mhelperProcess, command);
+
+    if (result.internalError != 0)
+        REPORT_ERROR_AND_EXIT("mhelper encountered an error during cudaSetDevice execution.\n");
+
     return result.cudaError;
 }
 

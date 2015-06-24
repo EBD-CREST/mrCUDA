@@ -15,6 +15,7 @@
 #define __NVIDIA_LIBRARY_PATH_ENV_NAME__ "MRCUDA_NVIDIA_LIB_PATH"
 
 MRCUDASym_t *mrcudaSymNvidia;
+static int gpuID;
 
 /**
  * Try to link the specified symbol to the handle.
@@ -196,8 +197,6 @@ extern void** CUDARTAPI __cudaRegisterFatBinary(
   void *fatCubin
 );
 
-static int gpuID;
-
 /**
  * Execute cuCtxCreate command.
  * @param command command information.
@@ -215,6 +214,20 @@ static int exec_cuCtxCreate(MHelperCommand_t command, MHelperResult_t *result)
     return 0;
 }
 
+/**
+ * Execute cudaSetDevice command.
+ * @param command command information.
+ * @param result output result.
+ * @return 0 always.
+ */
+static int exec_cudaSetDevice(MHelperCommand_t command, MHelperResult_t *result)
+{
+    result->cudaError = mrcudaSymNvidia->mrcudaSetDevice(command.args.cudaSetDevice.device);
+    result->id = command.id;
+    result->type = command.type;
+    result->internalError = 0;
+    return 0;
+}
 
 /**
  * Execute __cudaRegisterFatBinary command.
@@ -512,6 +525,8 @@ static int execute_command(MHelperCommand_t command, MHelperResult_t *result)
     switch (command.type) {
         case MRCOMMAND_TYPE_CUCTXCREATE:
             return exec_cuCtxCreate(command, result);
+        case MRCOMMAND_TYPE_CUDASETDEVICE:
+            return exec_cudaSetDevice(command, result);
         case MRCOMMAND_TYPE_CUDAREGISTERFATBINARY:
             return exec_cudaRegisterFatBinary(command, result);
         case MRCOMMAND_TYPE_CUDAREGISTERFUNCTION:

@@ -487,12 +487,22 @@ void mrcuda_switch(MRCUDAGPU_t *mrcudaGPU, int toGPUNumber)
         record = mrcudaGPU->mrecordGPU->mrcudaRecordHeadPtr;
         while (record != NULL) {
             if (!already_mock_stream && !(record->skipMockStream)) {
+                if (mrcudaGPU->status == MRCUDA_GPU_STATUS_HELPER && mhelper_int_cudaSetDevice_internal(mrcudaGPU, toGPUNumber) != cudaSuccess)
+                    REPORT_ERROR_AND_EXIT("Cannot set device in the mhelper.\n");
                 mrcuda_simulate_stream(mrcudaGPU);
                 already_mock_stream = !already_mock_stream;
             }
             record->replayFunc(mrcudaGPU, record);
             record = record->next;
         }
+
+        if (!already_mock_stream) {
+            if (mrcudaGPU->status == MRCUDA_GPU_STATUS_HELPER && mhelper_int_cudaSetDevice_internal(mrcudaGPU, toGPUNumber) != cudaSuccess)
+                REPORT_ERROR_AND_EXIT("Cannot set device in the mhelper.\n");
+            //mrcuda_simulate_stream(mrcudaGPU);
+            already_mock_stream = !already_mock_stream;
+        }
+
         mrcuda_sync_mem(mrcudaGPU);
 
         mrcuda_function_call_release(mrcudaGPU);

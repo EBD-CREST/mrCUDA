@@ -301,6 +301,10 @@ typedef struct cudaSetDeviceFlags_t {
     unsigned int flags;
 } cudaSetDeviceFlags_t;
 
+typedef struct cudaSetDevice_t {
+    int device;
+} cudaSetDevice_t;
+
 typedef struct cudaMemcpyToSymbol_t {
     size_t count;
     size_t offset;
@@ -383,6 +387,7 @@ typedef enum MHelperCommandType_e {
     MRCOMMAND_TYPE_CUDABINDTEXTURE,
     MRCOMMAND_TYPE_CUDASTREAMCREATE,
     MRCOMMAND_TYPE_CUDASETDEVICEFLAGS,
+    MRCOMMAND_TYPE_CUDASETDEVICE,
     MRCOMMAND_TYPE_CUDAMEMCPYTOSYMBOL,
     MRCOMMAND_TYPE_CUDAMEMCPYTOSYMBOLASYNC,
     MRCOMMAND_TYPE_CUDAMEMCPYFROMSYMBOL,
@@ -411,6 +416,7 @@ typedef struct MHelperCommand_t {
         cudaBindTexture_t cudaBindTexture;
         cudaStreamCreate_t cudaStreamCreate;
         cudaSetDeviceFlags_t cudaSetDeviceFlags;
+        cudaSetDevice_t cudaSetDevice;
         cudaMemcpyToSymbol_t cudaMemcpyToSymbol;
         cudaMemcpyFromSymbol_t cudaMemcpyFromSymbol;
         cudaMemcpy_t cudaMemcpy;

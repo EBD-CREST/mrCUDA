@@ -2,6 +2,7 @@
 #include "mrcuda.h"
 #include "datatypes.h"
 #include "record.h"
+#include "intercomm_interface.h"
 
 /**
  * Interface of __cudaRegisterFatBinary.
@@ -181,7 +182,10 @@ extern __host__ cudaError_t CUDARTAPI cudaLaunch(const void *func)
     MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
     mrcuda_function_call_lock(gpu);
-    ret = gpu->defaultHandler->mrcudaLaunch(func);
+    if (gpu->status == MRCUDA_GPU_STATUS_HELPER)
+        ret = mhelper_int_cudaLaunch_internal(gpu, func);
+    else
+        ret = gpu->defaultHandler->mrcudaLaunch(func);
     gpu->cudaLaunchCount++;
     mrcuda_function_call_release(gpu);
     if (gpu->switchThreshold == gpu->cudaLaunchCount)
