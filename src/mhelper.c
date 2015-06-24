@@ -448,7 +448,7 @@ static int exec_cudaMemcpy(MHelperCommand_t command, MHelperResult_t *result)
     MRCUDASharedMemLocalInfo_t *sharedMemInfo;
 
     if (command.args.cudaMemcpy.kind == cudaMemcpyHostToDevice) {
-        if ((sharedMemInfo = mhelper_mem_get(command.args.cudaSetupArgument.sharedMem)) == NULL)
+        if ((sharedMemInfo = mhelper_mem_get(command.args.cudaMemcpy.sharedMem)) == NULL)
             goto __exec_cudaMemcpy_err_0;
         result->cudaError = mrcudaSymNvidia->mrcudaMemcpy(
             command.args.cudaMemcpy.dst,
@@ -456,6 +456,7 @@ static int exec_cudaMemcpy(MHelperCommand_t command, MHelperResult_t *result)
             command.args.cudaMemcpy.count,
             command.args.cudaMemcpy.kind
         );
+        mhelper_mem_detach(sharedMemInfo);
         mhelper_mem_free(sharedMemInfo);
         result->internalError = 0;
     }
@@ -483,6 +484,22 @@ __exec_cudaMemcpy_err_1:
     return -2;
 __exec_cudaMemcpy_err_0:
     return -1;
+}
+
+/**
+ * Execute cudaStreamCreate command.
+ * @param command command information.
+ * @param result output result.
+ * @return 0 always
+ */
+static int exec_cudaStreamCreate(MHelperCommand_t command, MHelperResult_t *result)
+{
+    result->cudaError = mrcudaSymNvidia->mrcudaStreamCreate(&(result->args.cudaStreamCreate.stream));
+
+    result->id = command.id;
+    result->type = command.type;
+    result->internalError = 0;
+    return 0;
 }
 
 /**
@@ -547,6 +564,8 @@ static int execute_command(MHelperCommand_t command, MHelperResult_t *result)
             return exec_cudaGetLastError(command, result);
         case MRCOMMAND_TYPE_CUDAMEMCPY:
             return exec_cudaMemcpy(command, result);
+        case MRCOMMAND_TYPE_CUDASTREAMCREATE:
+            return exec_cudaStreamCreate(command, result);
     }
     return -1;
 }

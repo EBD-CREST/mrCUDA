@@ -542,6 +542,7 @@ gboolean __sync_mem_instance(gpointer key, gpointer value, gpointer user_data)
         case MRCUDA_GPU_STATUS_HELPER:
             if ((sharedMemInfo = mhelper_mem_malloc(record->data.cudaMalloc.size)) == NULL)
                 REPORT_ERROR_AND_EXIT("Cannot allocate the variable cache on shared mem for __sync_mem_instance.\n");
+            cache = sharedMemInfo->startAddr;
             break;
         default:
             REPORT_ERROR_AND_EXIT("Cannot perform __sync_mem_instance back to rCUDA.\n");

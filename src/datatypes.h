@@ -295,6 +295,7 @@ typedef struct cudaBindTexture_t {
 
 typedef struct cudaStreamCreate_t {
     cudaStream_t *pStream;
+    cudaStream_t stream;
 } cudaStreamCreate_t;
 
 typedef struct cudaSetDeviceFlags_t {
@@ -414,7 +415,6 @@ typedef struct MHelperCommand_t {
         cudaMalloc_t cudaMalloc;
         cudaFree_t cudaFree;
         cudaBindTexture_t cudaBindTexture;
-        cudaStreamCreate_t cudaStreamCreate;
         cudaSetDeviceFlags_t cudaSetDeviceFlags;
         cudaSetDevice_t cudaSetDevice;
         cudaMemcpyToSymbol_t cudaMemcpyToSymbol;
@@ -438,6 +438,7 @@ typedef struct MHelperResult_t {
         cudaMalloc_t cudaMalloc;
         cudaMemcpyFromSymbol_t cudaMemcpyFromSymbol;
         cudaMemcpy_t cudaMemcpy;
+        cudaStreamCreate_t cudaStreamCreate;
     } args;
 } MHelperResult_t;
 

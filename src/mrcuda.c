@@ -481,7 +481,8 @@ void mrcuda_switch(MRCUDAGPU_t *mrcudaGPU, int toGPUNumber)
         
         // Waiting for everything to be stable on rCUDA side.
         mrcudaSymRCUDA->mrcudaSetDevice(mrcudaGPU->virtualNumber);
-        //mrcudaSymRCUDA->mrcudaDeviceSynchronize();
+        sleep(1);
+        mrcudaSymRCUDA->mrcudaDeviceSynchronize();
 
         // Replay recorded commands.
         record = mrcudaGPU->mrecordGPU->mrcudaRecordHeadPtr;
@@ -499,11 +500,14 @@ void mrcuda_switch(MRCUDAGPU_t *mrcudaGPU, int toGPUNumber)
         if (!already_mock_stream) {
             if (mrcudaGPU->status == MRCUDA_GPU_STATUS_HELPER && mhelper_int_cudaSetDevice_internal(mrcudaGPU, toGPUNumber) != cudaSuccess)
                 REPORT_ERROR_AND_EXIT("Cannot set device in the mhelper.\n");
-            //mrcuda_simulate_stream(mrcudaGPU);
+            mrcuda_simulate_stream(mrcudaGPU);
             already_mock_stream = !already_mock_stream;
         }
 
         mrcuda_sync_mem(mrcudaGPU);
+
+        // Restore current device
+        mrcudaSymRCUDA->mrcudaSetDevice(currentGPU->virtualNumber);
 
         mrcuda_function_call_release(mrcudaGPU);
         __mrcuda_switch_release();

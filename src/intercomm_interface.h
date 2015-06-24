@@ -84,5 +84,8 @@ cudaError_t mhelper_int_cudaMemcpy_internal(MRCUDAGPU_t *mrcudaGPU, void *dst, c
 cudaError_t mhelper_int_cudaSetDevice(int device);
 cudaError_t mhelper_int_cudaSetDevice_internal(MRCUDAGPU_t *mrcudaGPU, int device);
 
+cudaError_t mhelper_int_cudaStreamCreate(cudaStream_t *pStream);
+cudaError_t mhelper_int_cudaStreamCreate_internal(MRCUDAGPU_t *mrcudaGPU, cudaStream_t *pStream);
+
 #endif /* __MRCUDA_INTERCOMM_INTERFACE__HEADER__ */
 
