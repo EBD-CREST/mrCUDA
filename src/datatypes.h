@@ -193,10 +193,7 @@ typedef struct cudaRegisterFatBinary_t {
 
 typedef struct cudaRegisterFunction_t {
     void **fatCubinHandle;
-    union {
-        const char *ptr;
-        size_t offset;    /* relative to the start of the specified shared memory. */
-    } hostFun;
+    const char *hostFun;
     union {
         char *ptr;
         size_t offset;    /* relative to the start of the specified shared memory. */

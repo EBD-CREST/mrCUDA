@@ -247,22 +247,20 @@ void mhelper_int_cudaRegisterFunction_internal(MRCUDAGPU_t *mrcudaGPU, void **fa
     MHelperCommand_t command;
     MHelperResult_t result;
     MHelperProcess_t *mhelperProcess = mrcudaGPU->mhelperProcess;
-    size_t hostFunSize = strlen(hostFun) + 1;
     size_t deviceFunSize = strlen(deviceFun) + 1;
     size_t deviceNameSize = strlen(deviceName) + 1;
-    MRCUDASharedMemLocalInfo_t *sharedMemInfo = __mhelper_mem_malloc_safe(hostFunSize + deviceFunSize + deviceNameSize);
+    MRCUDASharedMemLocalInfo_t *sharedMemInfo = __mhelper_mem_malloc_safe(deviceFunSize + deviceNameSize);
     void *addr = sharedMemInfo->startAddr;
 
-    addr = mempcpy(addr, hostFun, hostFunSize);
     addr = mempcpy(addr, deviceFun, deviceFunSize);
     addr = mempcpy(addr, deviceName, deviceNameSize);
 
     command.id = mhelper_generate_command_id(mrcudaGPU);
     command.type = MRCOMMAND_TYPE_CUDAREGISTERFUNCTION;
     command.args.cudaRegisterFunction.fatCubinHandle = fatCubinHandle;
-    command.args.cudaRegisterFunction.hostFun.offset = 0;
-    command.args.cudaRegisterFunction.deviceFun.offset = hostFunSize;
-    command.args.cudaRegisterFunction.deviceName.offset = hostFunSize + deviceFunSize;
+    command.args.cudaRegisterFunction.hostFun = hostFun;
+    command.args.cudaRegisterFunction.deviceFun.offset = 0;
+    command.args.cudaRegisterFunction.deviceName.offset = deviceFunSize;
     command.args.cudaRegisterFunction.thread_limit = thread_limit;
     command.args.cudaRegisterFunction.tid = tid;
     command.args.cudaRegisterFunction.bid = bid;

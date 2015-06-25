@@ -155,7 +155,7 @@ void mrcuda_record_cudaRegisterFunction(
     recordPtr->functionName = "__cudaRegisterFunction";
     recordPtr->skipMockStream = 1;
     recordPtr->data.cudaRegisterFunction.fatCubinHandlePtr = fatCubinHandleAddr;
-    recordPtr->data.cudaRegisterFunction.hostFun.ptr = hostFun;
+    recordPtr->data.cudaRegisterFunction.hostFun = hostFun;
     recordPtr->data.cudaRegisterFunction.deviceFun.ptr = deviceFun;
     recordPtr->data.cudaRegisterFunction.deviceName.ptr = deviceName;
     recordPtr->data.cudaRegisterFunction.thread_limit = thread_limit;
@@ -385,7 +385,7 @@ void mrcuda_replay_cudaRegisterFunction(MRCUDAGPU_t *mrcudaGPU, MRecord_t *recor
 {
     mrcudaGPU->defaultHandler->__mrcudaRegisterFunction(
         *(record->data.cudaRegisterFunction.fatCubinHandlePtr),
-        record->data.cudaRegisterFunction.hostFun.ptr,
+        record->data.cudaRegisterFunction.hostFun,
         record->data.cudaRegisterFunction.deviceFun.ptr,
         record->data.cudaRegisterFunction.deviceName.ptr,
         record->data.cudaRegisterFunction.thread_limit,

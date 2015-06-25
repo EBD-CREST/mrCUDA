@@ -480,9 +480,9 @@ void mrcuda_switch(MRCUDAGPU_t *mrcudaGPU, int toGPUNumber)
         mrcudaGPU->realNumber = toGPUNumber;
         
         // Waiting for everything to be stable on rCUDA side.
+        //sleep(1);
         mrcudaSymRCUDA->mrcudaSetDevice(mrcudaGPU->virtualNumber);
-        sleep(1);
-        mrcudaSymRCUDA->mrcudaDeviceSynchronize();
+        //mrcudaSymRCUDA->mrcudaDeviceSynchronize();
 
         // Replay recorded commands.
         record = mrcudaGPU->mrecordGPU->mrcudaRecordHeadPtr;

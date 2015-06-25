@@ -286,9 +286,10 @@ static int exec_cudaRegisterFunction(MHelperCommand_t command, MHelperResult_t *
 
     if ((sharedMemInfo = mhelper_mem_get(command.args.cudaRegisterFunction.sharedMem)) == NULL)
         goto __exec_cudaRegisterFunction_err_0;
+        
     mrcudaSymNvidia->__mrcudaRegisterFunction(
         command.args.cudaRegisterFunction.fatCubinHandle,
-        (char *)(sharedMemInfo->startAddr + command.args.cudaRegisterFunction.hostFun.offset),
+        command.args.cudaRegisterFunction.hostFun,
         (char *)(sharedMemInfo->startAddr + command.args.cudaRegisterFunction.deviceFun.offset),
         (char *)(sharedMemInfo->startAddr + command.args.cudaRegisterFunction.deviceName.offset),
         command.args.cudaRegisterFunction.thread_limit,
@@ -313,7 +314,7 @@ __exec_cudaRegisterFunction_err_0:
  * Execute cudaLaunch command.
  * @param command command information.
  * @param result output result.
- * @return 0 always
+ * @return 0 always.
  */
 static int exec_cudaLaunch(MHelperCommand_t command, MHelperResult_t *result)
 {
@@ -322,6 +323,7 @@ static int exec_cudaLaunch(MHelperCommand_t command, MHelperResult_t *result)
     result->id = command.id;
     result->type = command.type;
     result->internalError = 0;
+
     return 0;
 }
 
