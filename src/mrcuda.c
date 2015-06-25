@@ -396,6 +396,7 @@ void mrcuda_init()
 __attribute__((destructor))
 int mrcuda_fini()
 {
+    int i;
     if (mrcudaState == MRCUDA_STATE_RUNNING) {
         // Close and free mrcudaSymRCUDA resources.
         if (mrcudaSymRCUDA) {
@@ -409,6 +410,11 @@ int mrcuda_fini()
             if (mrcudaSymNvidia->handler.symHandler)
                 dlclose(mrcudaSymNvidia->handler.symHandler);
             free(mrcudaSymNvidia);
+        }
+
+        for (i = 0; i < mrcudaNumGPUs; i++) {
+            if (mrcudaGPUList[i].status == MRCUDA_GPU_STATUS_HELPER)
+                mhelper_destroy(mrcudaGPUList[i].mhelperProcess);
         }
 
         mrcuda_record_fini();
@@ -480,9 +486,7 @@ void mrcuda_switch(MRCUDAGPU_t *mrcudaGPU, int toGPUNumber)
         mrcudaGPU->realNumber = toGPUNumber;
         
         // Waiting for everything to be stable on rCUDA side.
-        //sleep(1);
         mrcudaSymRCUDA->mrcudaSetDevice(mrcudaGPU->virtualNumber);
-        //mrcudaSymRCUDA->mrcudaDeviceSynchronize();
 
         // Replay recorded commands.
         record = mrcudaGPU->mrecordGPU->mrcudaRecordHeadPtr;
