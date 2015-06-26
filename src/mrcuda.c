@@ -422,6 +422,8 @@ int mrcuda_fini()
         pthread_mutex_destroy(&__switch_mutex);
 
         mrcudaState = MRCUDA_STATE_FINALIZED;
+
+        printf("mrcuda_record: time %f\n", recordAccTime);
     }
 }
 
@@ -453,6 +455,10 @@ void mrcuda_switch(MRCUDAGPU_t *mrcudaGPU, int toGPUNumber)
     MRecord_t *record = NULL;
     int already_mock_stream = 0;
     MRCUDAGPU_t *currentGPU;
+    double switchAccTime = 0;
+    int switchNumReplay = 0;
+
+    STARTTIMMER();
 
     if (mrcudaState == MRCUDA_STATE_RUNNING && mrcudaGPU->status == MRCUDA_GPU_STATUS_RCUDA) {
         __mrcuda_switch_lock();
@@ -491,9 +497,11 @@ void mrcuda_switch(MRCUDAGPU_t *mrcudaGPU, int toGPUNumber)
         // Replay recorded commands.
         record = mrcudaGPU->mrecordGPU->mrcudaRecordHeadPtr;
         while (record != NULL) {
+            switchNumReplay++;
             if (!already_mock_stream && !(record->skipMockStream)) {
                 if (mrcudaGPU->status == MRCUDA_GPU_STATUS_HELPER && mhelper_int_cudaSetDevice_internal(mrcudaGPU, toGPUNumber) != cudaSuccess)
                     REPORT_ERROR_AND_EXIT("Cannot set device in the mhelper.\n");
+                switchNumReplay += 2;
                 mrcuda_simulate_stream(mrcudaGPU);
                 already_mock_stream = !already_mock_stream;
             }
@@ -504,6 +512,7 @@ void mrcuda_switch(MRCUDAGPU_t *mrcudaGPU, int toGPUNumber)
         if (!already_mock_stream) {
             if (mrcudaGPU->status == MRCUDA_GPU_STATUS_HELPER && mhelper_int_cudaSetDevice_internal(mrcudaGPU, toGPUNumber) != cudaSuccess)
                 REPORT_ERROR_AND_EXIT("Cannot set device in the mhelper.\n");
+            switchNumReplay += 2;
             mrcuda_simulate_stream(mrcudaGPU);
             already_mock_stream = !already_mock_stream;
         }
@@ -516,6 +525,16 @@ void mrcuda_switch(MRCUDAGPU_t *mrcudaGPU, int toGPUNumber)
         mrcuda_function_call_release(mrcudaGPU);
         __mrcuda_switch_release();
     }
+
+    ENDTIMMER(switchAccTime);
+
+    printf("mrcuda_sync_mem: size %f\n", memsyncSize);
+    printf("mrcuda_sync_mem: num_calls %d\n", memsyncNumCalls);
+    printf("mrcuda_sync_mem: time %f\n", memsyncAccTime);
+    printf("mrcuda_cudaMemcpy: size %f\n", memsyncMemcpySize);
+    printf("mrcuda_cudaMemcpyToSymbol: size %f\n", memsyncMemcpyToSymbolSize);
+    printf("mrcuda_switch: num_replay %d\n", switchNumReplay);
+    printf("mrcuda_switch: time %f\n", switchAccTime);
 }
 
 /**

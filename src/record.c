@@ -6,14 +6,18 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
-// For manual profiling
-#include <sys/time.h>
-
 #include "datatypes.h"
 #include "record.h"
 #include "intercomm_mem.h"
 #include "intercomm.h"
 #include "mrcuda.h"
+
+double recordAccTime = 0;
+double memsyncAccTime = 0;
+int memsyncNumCalls = 0;
+double memsyncSize = 0;
+double memsyncMemcpySize = 0;
+double memsyncMemcpyToSymbolSize = 0;
 
 MRecordGPU_t *mrecordGPUList = NULL;
 
@@ -116,6 +120,8 @@ void mrcuda_record_cudaRegisterFatBinary(MRCUDAGPU_t *mrcudaGPU, void* fatCubin,
 {
     MRecord_t *recordPtr;
 
+    STARTTIMMER();
+
     __mrcuda_record_new_safe(&recordPtr, mrcudaGPU);
 
     recordPtr->functionName = "__cudaRegisterFatBinary";
@@ -125,6 +131,8 @@ void mrcuda_record_cudaRegisterFatBinary(MRCUDAGPU_t *mrcudaGPU, void* fatCubin,
     recordPtr->replayFunc = &mrcuda_replay_cudaRegisterFatBinary;
 
     g_hash_table_insert(mrcudaGPU->mrecordGPU->fatCubinHandleAddrTable, fatCubinHandle, &(recordPtr->data.cudaRegisterFatBinary.fatCubinHandle));
+    
+    ENDTIMMER(recordAccTime);
 }
 
 /**
@@ -147,6 +155,8 @@ void mrcuda_record_cudaRegisterFunction(
     MRecord_t *recordPtr;
     void ***fatCubinHandleAddr;
 
+    STARTTIMMER();
+
     __mrcuda_record_new_safe(&recordPtr, mrcudaGPU);
 
     if ((fatCubinHandleAddr = g_hash_table_lookup(mrcudaGPU->mrecordGPU->fatCubinHandleAddrTable, fatCubinHandle)) == NULL)
@@ -165,6 +175,8 @@ void mrcuda_record_cudaRegisterFunction(
     recordPtr->data.cudaRegisterFunction.gDim = gDim;
     recordPtr->data.cudaRegisterFunction.wSize = wSize;
     recordPtr->replayFunc = &mrcuda_replay_cudaRegisterFunction;
+
+    ENDTIMMER(recordAccTime);
 }
 
 /**
@@ -185,6 +197,8 @@ void mrcuda_record_cudaRegisterVar(
     MRecord_t *recordPtr;
     void ***fatCubinHandleAddr;
 
+    STARTTIMMER();
+
     __mrcuda_record_new_safe(&recordPtr, mrcudaGPU);
 
     if ((fatCubinHandleAddr = g_hash_table_lookup(mrcudaGPU->mrecordGPU->fatCubinHandleAddrTable, fatCubinHandle)) == NULL)
@@ -203,6 +217,8 @@ void mrcuda_record_cudaRegisterVar(
     recordPtr->replayFunc = &mrcuda_replay_cudaRegisterVar;
 
     g_hash_table_insert(mrcudaGPU->mrecordGPU->activeSymbolTable, hostVar, recordPtr);
+
+    ENDTIMMER(recordAccTime);
 }
 
 /**
@@ -222,6 +238,8 @@ void mrcuda_record_cudaRegisterTexture(
     MRecord_t *recordPtr;
     void ***fatCubinHandleAddr;
 
+    STARTTIMMER();
+
     __mrcuda_record_new_safe(&recordPtr, mrcudaGPU);
 
     if ((fatCubinHandleAddr = g_hash_table_lookup(mrcudaGPU->mrecordGPU->fatCubinHandleAddrTable, fatCubinHandle)) == NULL)
@@ -237,6 +255,8 @@ void mrcuda_record_cudaRegisterTexture(
     recordPtr->data.cudaRegisterTexture.norm = norm;
     recordPtr->data.cudaRegisterTexture.ext = ext;
     recordPtr->replayFunc = &mrcuda_replay_cudaRegisterTexture;
+
+    ENDTIMMER(recordAccTime);
 }
 
 /**
@@ -264,6 +284,8 @@ void mrcuda_record_cudaMalloc(MRCUDAGPU_t *mrcudaGPU, void **devPtr, size_t size
 {
     MRecord_t *recordPtr;
 
+    STARTTIMMER();
+
     __mrcuda_record_new_safe(&recordPtr, mrcudaGPU);
     
     recordPtr->functionName = "cudaMalloc";
@@ -273,6 +295,8 @@ void mrcuda_record_cudaMalloc(MRCUDAGPU_t *mrcudaGPU, void **devPtr, size_t size
     recordPtr->replayFunc = &mrcuda_replay_cudaMalloc;
 
     g_hash_table_insert(mrcudaGPU->mrecordGPU->activeMemoryTable, *devPtr, recordPtr);
+
+    ENDTIMMER(recordAccTime);
 }
 
 /**
@@ -282,6 +306,8 @@ void mrcuda_record_cudaFree(MRCUDAGPU_t *mrcudaGPU, void *devPtr)
 {
     MRecord_t *recordPtr;
 
+    STARTTIMMER();
+
     __mrcuda_record_new_safe(&recordPtr, mrcudaGPU);
 
     recordPtr->functionName = "cudaFree";
@@ -290,6 +316,8 @@ void mrcuda_record_cudaFree(MRCUDAGPU_t *mrcudaGPU, void *devPtr)
     recordPtr->replayFunc = &mrcuda_replay_cudaFree;
 
     g_hash_table_remove(mrcudaGPU->mrecordGPU->activeMemoryTable, devPtr);
+
+    ENDTIMMER(recordAccTime);
 }
 
 /**
@@ -306,6 +334,8 @@ void mrcuda_record_cudaBindTexture(
 {
     MRecord_t *recordPtr;
 
+    STARTTIMMER();
+
     __mrcuda_record_new_safe(&recordPtr, mrcudaGPU);
 
     recordPtr->functionName = "cudaBindTexture";
@@ -319,6 +349,8 @@ void mrcuda_record_cudaBindTexture(
     memcpy(&(recordPtr->data.cudaBindTexture.desc), desc, sizeof(struct cudaChannelFormatDesc));
     recordPtr->data.cudaBindTexture.size = size;
     recordPtr->replayFunc = &mrcuda_replay_cudaBindTexture;
+
+    ENDTIMMER(recordAccTime);
 }
 
 /**
@@ -328,12 +360,16 @@ void mrcuda_record_cudaStreamCreate(MRCUDAGPU_t *mrcudaGPU, cudaStream_t *pStrea
 {
     MRecord_t *recordPtr;
 
+    STARTTIMMER();
+
     __mrcuda_record_new_safe(&recordPtr, mrcudaGPU);
 
     recordPtr->functionName = "cudaStreamCreate";
     recordPtr->skipMockStream = 0;
     recordPtr->data.cudaStreamCreate.pStream = pStream;
     recordPtr->replayFunc = &mrcuda_replay_cudaStreamCreate;
+
+    ENDTIMMER(recordAccTime);
 }
 
 /**
@@ -342,7 +378,9 @@ void mrcuda_record_cudaStreamCreate(MRCUDAGPU_t *mrcudaGPU, cudaStream_t *pStrea
  */
 void mrcuda_record_cudaHostAlloc(MRCUDAGPU_t *mrcudaGPU, void **pHost, size_t size, unsigned int flags)
 {
+    STARTTIMMER();
     g_hash_table_insert(mrcudaGPU->mrecordGPU->hostAllocTable, *pHost, mrcudaGPU->defaultHandler);
+    ENDTIMMER(recordAccTime);
 }
 
 /**
@@ -352,12 +390,16 @@ void mrcuda_record_cudaSetDeviceFlags(MRCUDAGPU_t *mrcudaGPU, unsigned int flags
 {
     MRecord_t *recordPtr;
 
+    STARTTIMMER();
+
     __mrcuda_record_new_safe(&recordPtr, mrcudaGPU);
 
     recordPtr->functionName = "cudaSetDeviceFlags";
     recordPtr->skipMockStream = 1;
     recordPtr->data.cudaSetDeviceFlags.flags = flags;
     recordPtr->replayFunc = &mrcuda_replay_cudaSetDeviceFlags;
+
+    ENDTIMMER(recordAccTime);
 }
 
 /*******************************************
@@ -533,6 +575,10 @@ gboolean __sync_mem_instance(gpointer key, gpointer value, gpointer user_data)
     MHelperResult_t result;
     void *cache;
 
+    memsyncMemcpySize += record->data.cudaMalloc.size;
+    memsyncSize += record->data.cudaMalloc.size;
+    memsyncNumCalls++;
+
     switch (mrcudaGPU->status) {
         case MRCUDA_GPU_STATUS_NATIVE:
             cache = malloc(record->data.cudaMalloc.size);
@@ -608,6 +654,10 @@ gboolean __sync_symbol_instance(gpointer key, gpointer value, gpointer user_data
     void *dst;
     cudaError_t error;
 
+    memsyncMemcpyToSymbolSize += record->data.cudaRegisterVar.size;
+    memsyncSize += record->data.cudaRegisterVar.size;
+    memsyncNumCalls++;
+
     switch (mrcudaGPU->status) {
         case MRCUDA_GPU_STATUS_NATIVE:
             if ((dst = malloc(record->data.cudaRegisterVar.size)) == NULL)
@@ -672,6 +722,7 @@ gboolean __sync_symbol_instance(gpointer key, gpointer value, gpointer user_data
  */
 void mrcuda_sync_mem(MRCUDAGPU_t *mrcudaGPU)
 {
+    STARTTIMMER();
     g_hash_table_foreach_remove(
         mrcudaGPU->mrecordGPU->activeMemoryTable,
         &__sync_mem_instance,
@@ -683,6 +734,7 @@ void mrcuda_sync_mem(MRCUDAGPU_t *mrcudaGPU)
         &__sync_symbol_instance,
         mrcudaGPU
     );
+    ENDTIMMER(memsyncAccTime);
 }
 
 /**

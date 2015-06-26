@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <glib.h>
+#include <sys/time.h>
 
 #include <config.h>
 
@@ -21,7 +22,13 @@
         exit(EXIT_FAILURE); \
     } while(0)
 
+#define STARTTIMMER() \
+    struct timeval t1, t2; \
+    gettimeofday(&t1, NULL);
+
+#define ENDTIMMER(acctime) \
+    gettimeofday(&t2, NULL); \
+    acctime += (t2.tv_sec - t1.tv_sec) * 1000 + (t2.tv_usec - t1.tv_usec) / 1000.0;
+
 #endif
-
-
 
