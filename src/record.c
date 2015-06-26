@@ -16,8 +16,6 @@ double recordAccTime = 0;
 double memsyncAccTime = 0;
 int memsyncNumCalls = 0;
 double memsyncSize = 0;
-double memsyncMemcpySize = 0;
-double memsyncMemcpyToSymbolSize = 0;
 
 MRecordGPU_t *mrecordGPUList = NULL;
 
@@ -575,7 +573,6 @@ gboolean __sync_mem_instance(gpointer key, gpointer value, gpointer user_data)
     MHelperResult_t result;
     void *cache;
 
-    memsyncMemcpySize += record->data.cudaMalloc.size;
     memsyncSize += record->data.cudaMalloc.size;
     memsyncNumCalls++;
 
@@ -654,7 +651,6 @@ gboolean __sync_symbol_instance(gpointer key, gpointer value, gpointer user_data
     void *dst;
     cudaError_t error;
 
-    memsyncMemcpyToSymbolSize += record->data.cudaRegisterVar.size;
     memsyncSize += record->data.cudaRegisterVar.size;
     memsyncNumCalls++;
 

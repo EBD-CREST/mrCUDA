@@ -423,7 +423,7 @@ int mrcuda_fini()
 
         mrcudaState = MRCUDA_STATE_FINALIZED;
 
-        printf("mrcuda_record: time %f\n", recordAccTime);
+        printf("mrcuda_record: time: %f\n", recordAccTime);
     }
 }
 
@@ -528,13 +528,11 @@ void mrcuda_switch(MRCUDAGPU_t *mrcudaGPU, int toGPUNumber)
 
     ENDTIMMER(switchAccTime);
 
-    printf("mrcuda_sync_mem: size %f\n", memsyncSize);
-    printf("mrcuda_sync_mem: num_calls %d\n", memsyncNumCalls);
-    printf("mrcuda_sync_mem: time %f\n", memsyncAccTime);
-    printf("mrcuda_cudaMemcpy: size %f\n", memsyncMemcpySize);
-    printf("mrcuda_cudaMemcpyToSymbol: size %f\n", memsyncMemcpyToSymbolSize);
-    printf("mrcuda_switch: num_replay %d\n", switchNumReplay);
-    printf("mrcuda_switch: time %f\n", switchAccTime);
+    printf("mrcuda_sync_mem: size: %f\n", memsyncSize);
+    printf("mrcuda_sync_mem: num_calls: %d\n", memsyncNumCalls);
+    printf("mrcuda_sync_mem: time: %f\n", memsyncAccTime);
+    printf("mrcuda_switch: num_replay: %d\n", switchNumReplay);
+    printf("mrcuda_switch: time: %f\n", switchAccTime);
 }
 
 /**

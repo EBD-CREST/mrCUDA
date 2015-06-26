@@ -11,8 +11,6 @@ extern double recordAccTime;
 extern double memsyncAccTime;
 extern int memsyncNumCalls;
 extern double memsyncSize;
-extern double memsyncMemcpySize;
-extern double memsyncMemcpyToSymbolSize;
 
 extern MRecordGPU_t *mrecordGPUList;
 
