@@ -126,7 +126,7 @@ def plot_memsync_bw(input_data):
 
     plt.legend(zip(*legend_list)[0], zip(*legend_list)[1],
         loc = 'upper left',
-        prop = matplotlib.font_manager.FontProperties(size = 15, weight = 'bold')
+        prop = matplotlib.font_manager.FontProperties(size = 20, weight = 'bold')
     )
     plt.xscale('log', basex = 2)
     plt.yscale('log', basey = 10)
