@@ -18,8 +18,8 @@ def parseargs():
         description = 'mrCUDA overhead benchmark result plotter'
     )
     parser.add_argument('type',
-        choices = ('memsync', 'memsync-bw',),
-        help = 'Overhead type (memsync, memsync-bw)'
+        choices = ('memsync', 'memsync-bw', 'mhelper-nullker'),
+        help = 'Overhead type (memsync, memsync-bw, mhelper-nullker)'
     )
     parser.add_argument('resultfile', type = argparse.FileType('r'),
         help = 'Result file (csv)'
@@ -28,7 +28,7 @@ def parseargs():
 
 def read_memsync_input(input_file):
     # All time is in ms.
-    # All size is in B.
+    # All sizes are in B.
     reader = csv.DictReader(input_file, delimiter = ' ')
     result = list()
     for row in reader:
@@ -141,6 +141,83 @@ def plot_memsync_bw(input_data):
 
     plt.show()
 
+def read_mhelper_input(input_file):
+    # All time is in ms.
+    # All sizes are in B.
+    reader = csv.DictReader(input_file, delimiter = ' ')
+    result = list()
+    for row in reader:
+        row['count'] = int(row['count'])
+        row['time'] = float(row['time'])
+        if 'num_calls' in row:
+            row['num_calls'] = int(row['num_calls'])
+        else:
+            row['size_per_call'] = int(row['size_per_call'])
+        result.append(row)
+    return result
+
+def plot_mhelper_nullker(input_data):
+    properties = {
+        'coefd': 6.87138 * (10 ** -10), #s
+        'coefc': 9.98263 * (10 ** -6), # s
+        'const': 0.00293373, # s
+    }
+
+    native_data = dict()
+    mrcuda_data = dict()
+    for data in input_data:
+        if data['lib'] == 'native':
+            data_dict = native_data
+        else:
+            data_dict = mrcuda_data
+        if data['num_calls'] not in data_dict:
+            data_dict[data['num_calls']] = list()
+        data_dict[data['num_calls']].append(data['time'])
+
+    x_values = list()
+    y_values = list()
+
+    for num_calls in native_data.iterkeys():
+        avg_time = np.average(native_data[num_calls])
+        for time in mrcuda_data[num_calls]:
+            x_values.append(num_calls)
+            y_values.append((time - avg_time) * (10 ** -3)) # seconds
+
+    legend_list = list()
+
+    p = plt.scatter(
+        x_values,
+        y_values,
+        c = COLOR[0],
+        marker = 'o',
+        s = 40
+    )
+    legend_list.append((p, 'Measured',))
+
+    x_values = sorted(set(x_values))
+    y_values = [properties['coefc'] * x + properties['const'] for x in x_values]
+
+    plt.plot(x_values, y_values, COLOR[0], linewidth = 4)
+    p = mlines.Line2D([], [], color = COLOR[0], linewidth = 4)
+    legend_list.append((p, 'Predicted',))
+
+    plt.legend(zip(*legend_list)[0], zip(*legend_list)[1],
+        loc = 'upper left',
+        prop = matplotlib.font_manager.FontProperties(size = 20, weight = 'bold')
+    )
+    plt.xscale('log', basex = 2)
+    plt.yscale('log', basey = 10)
+    plt.xlim(xmin = 0)
+    plt.ylim(ymin = 0)
+
+    plt.xlabel('Number of calls', size = 25, weight = 'bold')
+    plt.ylabel('Time (s)', size = 25, weight = 'bold')
+
+    plt.xticks(size = 20, weight = 'bold')
+    plt.yticks(size = 20, weight = 'bold')
+
+    plt.show()
+
 def main():
     """
     Main function.
@@ -153,6 +230,9 @@ def main():
     elif args.type == 'memsync-bw':
         input_data = read_memsync_input(args.resultfile)
         plot_memsync_bw(input_data)
+    elif args.type == 'mhelper-nullker':
+        input_data = read_mhelper_input(args.resultfile)
+        plot_mhelper_nullker(input_data)
 
 if __name__ == "__main__":
     main()
