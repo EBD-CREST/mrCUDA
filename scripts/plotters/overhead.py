@@ -18,8 +18,8 @@ def parseargs():
         description = 'mrCUDA overhead benchmark result plotter'
     )
     parser.add_argument('type',
-        choices = ('memsync', 'memsync-bw', 'mhelper-nullker'),
-        help = 'Overhead type (memsync, memsync-bw, mhelper-nullker)'
+        choices = ('memsync', 'memsync-bw', 'mhelper-nullker', 'mhelper-memcpybw',),
+        help = 'Overhead type'
     )
     parser.add_argument('resultfile', type = argparse.FileType('r'),
         help = 'Result file (csv)'
@@ -203,7 +203,7 @@ def plot_mhelper_nullker(input_data):
 
     plt.legend(zip(*legend_list)[0], zip(*legend_list)[1],
         loc = 'upper left',
-        prop = matplotlib.font_manager.FontProperties(size = 20, weight = 'bold')
+        prop = matplotlib.font_manager.FontProperties(size = 25, weight = 'bold')
     )
     plt.xscale('log', basex = 2)
     plt.yscale('log', basey = 10)
@@ -211,6 +211,69 @@ def plot_mhelper_nullker(input_data):
     plt.ylim(ymin = 0)
 
     plt.xlabel('Number of calls', size = 25, weight = 'bold')
+    plt.ylabel('Time (s)', size = 25, weight = 'bold')
+
+    plt.xticks(size = 20, weight = 'bold')
+    plt.yticks(size = 20, weight = 'bold')
+
+    plt.show()
+
+def plot_mhelper_memcpybw(input_data):
+    properties = {
+        'coefd': 6.87138 * (10 ** -10), #s
+        'coefc': 9.98263 * (10 ** -6), # s
+        'const': 0.00293373, # s
+        'num_calls': 1000,
+    }
+
+    native_data = dict()
+    mrcuda_data = dict()
+    for data in input_data:
+        if data['lib'] == 'native':
+            data_dict = native_data
+        else:
+            data_dict = mrcuda_data
+        if data['size_per_call'] not in data_dict:
+            data_dict[data['size_per_call']] = list()
+        data_dict[data['size_per_call']].append(data['time'])
+
+    x_values = list()
+    y_values = list()
+
+    for size_per_call in native_data.iterkeys():
+        avg_time = np.average(native_data[size_per_call])
+        for time in mrcuda_data[size_per_call]:
+            x_values.append(size_per_call)
+            y_values.append((time - avg_time) * (10 ** -3)) # seconds
+
+    legend_list = list()
+
+    p = plt.scatter(
+        x_values,
+        y_values,
+        c = COLOR[0],
+        marker = 'o',
+        s = 40
+    )
+    legend_list.append((p, 'Measured',))
+
+    x_values = sorted(set(x_values))
+    y_values = [properties['coefd'] * x * properties['num_calls'] + properties['coefc'] * properties['num_calls'] + properties['const'] for x in x_values]
+
+    plt.plot(x_values, y_values, COLOR[0], linewidth = 4)
+    p = mlines.Line2D([], [], color = COLOR[0], linewidth = 4)
+    legend_list.append((p, 'Predicted',))
+
+    plt.legend(zip(*legend_list)[0], zip(*legend_list)[1],
+        loc = 'upper left',
+        prop = matplotlib.font_manager.FontProperties(size = 25, weight = 'bold')
+    )
+    plt.xscale('log', basex = 2)
+    plt.yscale('log', basey = 10)
+    plt.xlim(xmin = 0)
+    plt.ylim(ymin = 0)
+
+    plt.xlabel('Size per calls (B)', size = 25, weight = 'bold')
     plt.ylabel('Time (s)', size = 25, weight = 'bold')
 
     plt.xticks(size = 20, weight = 'bold')
@@ -233,6 +296,9 @@ def main():
     elif args.type == 'mhelper-nullker':
         input_data = read_mhelper_input(args.resultfile)
         plot_mhelper_nullker(input_data)
+    elif args.type == 'mhelper-memcpybw':
+        input_data = read_mhelper_input(args.resultfile)
+        plot_mhelper_memcpybw(input_data)
 
 if __name__ == "__main__":
     main()
