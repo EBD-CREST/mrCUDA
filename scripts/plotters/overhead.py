@@ -18,7 +18,7 @@ def parseargs():
         description = 'mrCUDA overhead benchmark result plotter'
     )
     parser.add_argument('type',
-        choices = ('memsync', 'memsync-bw', 'mhelper-nullker', 'mhelper-memcpybw',),
+        choices = ('memsync', 'memsync-bw', 'mhelper-nullker', 'mhelper-memcpybw', 'record-replay',),
         help = 'Overhead type'
     )
     parser.add_argument('resultfile', type = argparse.FileType('r'),
@@ -281,6 +281,107 @@ def plot_mhelper_memcpybw(input_data):
 
     plt.show()
 
+def read_record_replay_input(input_file):
+    # All time is in s.
+    reader = csv.DictReader(input_file, delimiter = ',')
+    result = list()
+    for row in reader:
+        if row['mrcuda_switch num_replay']:
+            row['mrcuda_record time'] = float(row['mrcuda_record time'])
+            row['mrcuda_switch time'] = float(row['mrcuda_switch time'])
+            row['mrcuda_sync_mem time'] = float(row['mrcuda_sync_mem time'])
+            row['mrcuda_replay time'] = row['mrcuda_switch time'] - row['mrcuda_sync_mem time']
+            row['mrcuda_switch num_replay'] = int(row['mrcuda_switch num_replay'])
+            result.append(row)
+    return result
+
+def plot_record_replay(input_data):
+    properties = {
+        'record_coef': 2.825 * (10 ** -7), # s
+        'record_const': 0.3437 * (10 ** -3), # s
+        'replay_coef': 1.031 * (10 ** -6), # s
+        'replay_const': 1.2437, # s
+    }
+
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
+
+    legend_list = list()
+
+    x_values = [row['mrcuda_switch num_replay'] for row in input_data]
+
+    p = ax1.scatter(
+        x_values,
+        [row['mrcuda_record time'] for row in input_data],
+        c = COLOR[0],
+        marker = 'o',
+        s = 40
+    )
+    legend_list.append((p, 'Record Overhead (Measured)',))
+
+    p = ax2.scatter(
+        x_values,
+        [row['mrcuda_replay time'] for row in input_data],
+        c = COLOR[1],
+        marker = 'o',
+        s = 40
+    )
+    legend_list.append((p, 'Replay Overhead (Measured)',))
+
+    x_values = sorted(set(x_values))
+
+    ax1.plot(
+        x_values, 
+        [properties['record_coef'] * x + properties['record_const'] for x in x_values], 
+        COLOR[0], 
+        linewidth = 4
+    )
+    p = mlines.Line2D([], [], color = COLOR[0], linewidth = 4)
+    legend_list.append((p, 'Record Overhead (Predicted)',))
+
+    ax2.plot(
+        x_values, 
+        [properties['replay_coef'] * x + properties['replay_const'] for x in x_values], 
+        COLOR[1], 
+        linewidth = 4
+    )
+    p = mlines.Line2D([], [], color = COLOR[1], linewidth = 4)
+    legend_list.append((p, 'Replay Overhead (Predicted)',))
+
+    plt.legend(zip(*legend_list)[0], zip(*legend_list)[1],
+        loc = 'lower right',
+        prop = matplotlib.font_manager.FontProperties(size = 30, weight = 'bold')
+    )
+    #plt.xscale('log', basex = 2)
+    #plt.yscale('log', basey = 10)
+    ax1.set_xlim(xmin = 0)
+    ax2.set_xlim(xmin = 0)
+    ax1.set_ylim(ymin = 0)
+    ax2.set_ylim(ymin = 0)
+
+    ax1.set_xlabel('Number of calls (x10,000)', size = 30, weight = 'bold')
+    ax1.set_ylabel('Record Time (ms)', size = 30, weight = 'bold')
+    ax2.set_ylabel('Replay Time (s)', size = 30, weight = 'bold')
+
+    fig.canvas.draw()
+
+    ax1.set_xticklabels(['%d' % (int(label.get_text()) / 10000,) for label in ax1.get_xticklabels()])
+
+    for label in ax1.get_xticklabels():
+        label.set_fontsize(25)
+        label.set_fontweight('bold')
+
+    ax1.set_yticklabels(['%d' % (float(label.get_text()) * 1000,) if label.get_text() else '' for label in ax1.get_yticklabels()])
+
+    for label in ax1.get_yticklabels():
+        label.set_fontsize(25)
+        label.set_fontweight('bold')
+    for label in ax2.get_yticklabels():
+        label.set_fontsize(25)
+        label.set_fontweight('bold')
+
+    plt.show()
+
 def main():
     """
     Main function.
@@ -299,6 +400,9 @@ def main():
     elif args.type == 'mhelper-memcpybw':
         input_data = read_mhelper_input(args.resultfile)
         plot_mhelper_memcpybw(input_data)
+    elif args.type == 'record-replay':
+        input_data = read_record_replay_input(args.resultfile)
+        plot_record_replay(input_data)
 
 if __name__ == "__main__":
     main()
