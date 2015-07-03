@@ -84,18 +84,18 @@ def plot_memsync(input_data):
 
     plt.legend(zip(*legend_list)[0], zip(*legend_list)[1],
         loc = 'upper left',
-        prop = matplotlib.font_manager.FontProperties(size = 20, weight = 'bold')
+        prop = matplotlib.font_manager.FontProperties(size = 25, weight = 'bold')
     )
     plt.xscale('log', basex = 2)
     plt.yscale('log', basey = 10)
     plt.xlim(xmin = 0)
     plt.ylim(ymin = 0)
 
-    plt.xlabel('Size per region (B)', size = 25, weight = 'bold')
-    plt.ylabel('Time (ms)', size = 25, weight = 'bold')
+    plt.xlabel('Size per region (B)', size = 30, weight = 'bold')
+    plt.ylabel('Time (ms)', size = 30, weight = 'bold')
 
-    plt.xticks(size = 20, weight = 'bold')
-    plt.yticks(size = 20, weight = 'bold')
+    plt.xticks(size = 25, weight = 'bold')
+    plt.yticks(size = 25, weight = 'bold')
 
     plt.show()
 
@@ -126,18 +126,18 @@ def plot_memsync_bw(input_data):
 
     plt.legend(zip(*legend_list)[0], zip(*legend_list)[1],
         loc = 'upper left',
-        prop = matplotlib.font_manager.FontProperties(size = 20, weight = 'bold')
+        prop = matplotlib.font_manager.FontProperties(size = 30, weight = 'bold')
     )
     plt.xscale('log', basex = 2)
     plt.yscale('log', basey = 10)
     plt.xlim(xmin = 0)
     plt.ylim(ymin = 0)
 
-    plt.xlabel('Size per region (B)', size = 25, weight = 'bold')
-    plt.ylabel('Bandwidth (MB / s)', size = 25, weight = 'bold')
+    plt.xlabel('Size per region (B)', size = 30, weight = 'bold')
+    plt.ylabel('Bandwidth (MB / s)', size = 30, weight = 'bold')
 
-    plt.xticks(size = 20, weight = 'bold')
-    plt.yticks(size = 20, weight = 'bold')
+    plt.xticks(size = 25, weight = 'bold')
+    plt.yticks(size = 25, weight = 'bold')
 
     plt.show()
 
@@ -203,18 +203,18 @@ def plot_mhelper_nullker(input_data):
 
     plt.legend(zip(*legend_list)[0], zip(*legend_list)[1],
         loc = 'upper left',
-        prop = matplotlib.font_manager.FontProperties(size = 25, weight = 'bold')
+        prop = matplotlib.font_manager.FontProperties(size = 30, weight = 'bold')
     )
     plt.xscale('log', basex = 2)
     plt.yscale('log', basey = 10)
     plt.xlim(xmin = 0)
     plt.ylim(ymin = 0)
 
-    plt.xlabel('Number of calls', size = 25, weight = 'bold')
-    plt.ylabel('Time (s)', size = 25, weight = 'bold')
+    plt.xlabel('Number of calls', size = 30, weight = 'bold')
+    plt.ylabel('Time (s)', size = 30, weight = 'bold')
 
-    plt.xticks(size = 20, weight = 'bold')
-    plt.yticks(size = 20, weight = 'bold')
+    plt.xticks(size = 25, weight = 'bold')
+    plt.yticks(size = 25, weight = 'bold')
 
     plt.show()
 
@@ -266,18 +266,18 @@ def plot_mhelper_memcpybw(input_data):
 
     plt.legend(zip(*legend_list)[0], zip(*legend_list)[1],
         loc = 'upper left',
-        prop = matplotlib.font_manager.FontProperties(size = 25, weight = 'bold')
+        prop = matplotlib.font_manager.FontProperties(size = 30, weight = 'bold')
     )
     plt.xscale('log', basex = 2)
     plt.yscale('log', basey = 10)
     plt.xlim(xmin = 0)
     plt.ylim(ymin = 0)
 
-    plt.xlabel('Size per calls (B)', size = 25, weight = 'bold')
-    plt.ylabel('Time (s)', size = 25, weight = 'bold')
+    plt.xlabel('Size per calls (B)', size = 30, weight = 'bold')
+    plt.ylabel('Time (s)', size = 30, weight = 'bold')
 
-    plt.xticks(size = 20, weight = 'bold')
-    plt.yticks(size = 20, weight = 'bold')
+    plt.xticks(size = 25, weight = 'bold')
+    plt.yticks(size = 25, weight = 'bold')
 
     plt.show()
 
@@ -363,15 +363,13 @@ def plot_record_replay(input_data):
     ax1.set_ylabel('Record Time (ms)', size = 30, weight = 'bold')
     ax2.set_ylabel('Replay Time (s)', size = 30, weight = 'bold')
 
-    fig.canvas.draw()
-
-    ax1.set_xticklabels(['%d' % (int(label.get_text()) / 10000,) for label in ax1.get_xticklabels()])
+    ax1.set_xticklabels(['%d' % (int(label) / 10000,) for label in ax1.get_xticks().tolist()])
 
     for label in ax1.get_xticklabels():
         label.set_fontsize(25)
         label.set_fontweight('bold')
 
-    ax1.set_yticklabels(['%d' % (float(label.get_text()) * 1000,) if label.get_text() else '' for label in ax1.get_yticklabels()])
+    ax1.set_yticklabels(['%d' % (float(label) * 1000,) for label in ax1.get_yticks().tolist()])
 
     for label in ax1.get_yticklabels():
         label.set_fontsize(25)
