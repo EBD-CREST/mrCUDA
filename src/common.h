@@ -28,7 +28,7 @@
 
 #define ENDTIMMER(acctime) \
     gettimeofday(&t2, NULL); \
-    acctime += (t2.tv_sec - t1.tv_sec) * 1000 + (t2.tv_usec - t1.tv_usec) / 1000.0;
+    acctime += (t2.tv_sec - t1.tv_sec) * 1000.0 + (t2.tv_usec - t1.tv_usec) / 1000.0;
 
 #endif
 

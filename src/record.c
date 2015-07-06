@@ -14,6 +14,8 @@
 
 double recordAccTime = 0;
 double memsyncAccTime = 0;
+double memsyncrCUDAAccTime = 0;
+double memsyncNvidiaAccTime = 0;
 int memsyncNumCalls = 0;
 double memsyncSize = 0;
 
@@ -572,6 +574,7 @@ gboolean __sync_mem_instance(gpointer key, gpointer value, gpointer user_data)
     MHelperCommand_t command;
     MHelperResult_t result;
     void *cache;
+    struct timeval t3, t4;
 
     memsyncSize += record->data.cudaMalloc.size;
     memsyncNumCalls++;
@@ -592,23 +595,28 @@ gboolean __sync_mem_instance(gpointer key, gpointer value, gpointer user_data)
             break;
     }
 
-    if(mrcudaSymRCUDA->mrcudaMemcpy(
+    STARTTIMMER();
+    if (mrcudaSymRCUDA->mrcudaMemcpy(
         cache,
         record->data.cudaMalloc.devPtr,
         record->data.cudaMalloc.size,
         cudaMemcpyDeviceToHost
     ) != cudaSuccess)
         REPORT_ERROR_AND_EXIT("Cannot copy memory from rCUDA to host for caching in __sync_mem_instance.\n");
+    ENDTIMMER(memsyncrCUDAAccTime);
 
     switch (mrcudaGPU->status) {
         case MRCUDA_GPU_STATUS_NATIVE:
-            if(mrcudaSymNvidia->mrcudaMemcpy(
+            gettimeofday(&t3, NULL);
+            if (mrcudaSymNvidia->mrcudaMemcpy(
                 record->data.cudaMalloc.devPtr,
                 cache,
                 record->data.cudaMalloc.size,
                 cudaMemcpyHostToDevice
             ) != cudaSuccess)
                 REPORT_ERROR_AND_EXIT("Cannot copy memory from the host's cache to the native device in __sync_mem_instance.\n");
+            gettimeofday(&t4, NULL);
+            memsyncNvidiaAccTime += (t4.tv_sec - t3.tv_sec) * 1000.0 + (t4.tv_usec - t3.tv_usec) / 1000.0;
             free(cache);
             break;
         case MRCUDA_GPU_STATUS_HELPER:

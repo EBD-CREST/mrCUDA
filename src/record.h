@@ -9,6 +9,8 @@
 
 extern double recordAccTime;
 extern double memsyncAccTime;
+extern double memsyncrCUDAAccTime;
+extern double memsyncNvidiaAccTime;
 extern int memsyncNumCalls;
 extern double memsyncSize;
 

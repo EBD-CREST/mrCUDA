@@ -531,6 +531,10 @@ void mrcuda_switch(MRCUDAGPU_t *mrcudaGPU, int toGPUNumber)
     printf("mrcuda_sync_mem: size: %f\n", memsyncSize);
     printf("mrcuda_sync_mem: num_calls: %d\n", memsyncNumCalls);
     printf("mrcuda_sync_mem: time: %f\n", memsyncAccTime);
+    printf("mrcuda_sync_mem: rcuda_time: %f\n", memsyncrCUDAAccTime);
+    printf("mrcuda_sync_mem: mrcuda_time: %f\n", memsyncAccTime - memsyncrCUDAAccTime);
+    printf("mrcuda_sync_mem: nvidia_time: %f\n", memsyncNvidiaAccTime);
+    printf("mrcuda_sync_mem: other_time: %f\n", memsyncAccTime - memsyncrCUDAAccTime - memsyncNvidiaAccTime);
     printf("mrcuda_switch: num_replay: %d\n", switchNumReplay);
     printf("mrcuda_switch: time: %f\n", switchAccTime);
 }
