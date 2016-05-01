@@ -1,6 +1,10 @@
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
+import matplotlib.markers as mmarkers
 import matplotlib.font_manager
+from matplotlib import rcParams
+
+rcParams['mathtext.fontset'] = 'custom'
 
 import numpy as np
 
@@ -34,6 +38,9 @@ def read_memsync_input(input_file):
     for row in reader:
         row['total_size'] = int(row['total_size'])
         row['num_regions'] = int(row['num_regions'])
+        # Filter out some results to reduce size
+        if math.log(row['num_regions'], 2) % 2 == 1:
+            continue
         row['memsync_time'] = float(row['memsync_time'])
         row['rcuda_time'] = float(row['rcuda_time'])
         row['local_time'] = float(row['local_time'])
@@ -59,43 +66,47 @@ def plot_memsync(input_data):
             group_dict[data['num_regions']] = [list(), list(),]
         group_data = group_dict[data['num_regions']]
         group_data[0].append(data['size_per_region'])
-        group_data[1].append(data['local_time'])
+        group_data[1].append(data['local_time'] / 1000) 
 
         if data['num_regions'] not in predicted_dict:
             predicted_dict[data['num_regions']] = dict()
         if data['size_per_region'] not in predicted_dict[data['num_regions']]:
-            predicted_dict[data['num_regions']][data['size_per_region']] = data['num_regions'] * (properties['memsync_coef'] * data['size_per_region'] + properties['memsync_const'] + data['size_per_region'] / min(properties['bw_max'], properties['bw_coef'] * data['size_per_region'])) * (10 ** 3)
+            predicted_dict[data['num_regions']][data['size_per_region']] = data['num_regions'] * (properties['memsync_coef'] * data['size_per_region'] + properties['memsync_const'] + data['size_per_region'] / min(properties['bw_max'], properties['bw_coef'] * data['size_per_region']))
 
     legend_list = list()
     i = 0
     for num_regions, group_data in sorted(group_dict.items(), key = lambda item: item[0]):
-        p = plt.scatter(group_data[0], group_data[1], 
+        plt.scatter(group_data[0], group_data[1], 
             c = COLOR[i % len(COLOR)],
             marker = 'o' if i < len(COLOR) else '+',
             s = 40
         )
-        legend_list.append((p, '$\mathbf{2^{%d}}$ regions (measured)' % (math.log(num_regions, 2),),))
         x, y = zip(*sorted(predicted_dict[num_regions].items(), key = lambda item: item[0]))
-        plt.plot(x, y, COLOR[i % len(COLOR)], linewidth = 4)
+        p = plt.plot(x, y, COLOR[i % len(COLOR)], linewidth = 4)
+        legend_list.append((p[0], '$\mathbf{2^{%d}}$ regions' % (math.log(num_regions, 2),),))
         i += 1
 
     p = mlines.Line2D([], [], color = 'black', linewidth = 4)
     legend_list.append((p, 'Predicted',))
+    p = mlines.Line2D([], [], color = 'black', marker = 'o', markersize = 16, linestyle = 'None')
+    legend_list.append((p, 'Measured',))
+
+    legend_list.reverse()
 
     plt.legend(zip(*legend_list)[0], zip(*legend_list)[1],
         loc = 'upper left',
-        prop = matplotlib.font_manager.FontProperties(size = 25, weight = 'bold')
+        prop = matplotlib.font_manager.FontProperties(size = 30, weight = 'bold')
     )
     plt.xscale('log', basex = 2)
     plt.yscale('log', basey = 10)
     plt.xlim(xmin = 0)
     plt.ylim(ymin = 0)
 
-    plt.xlabel('Size per region (B)', size = 30, weight = 'bold')
-    plt.ylabel('Time (ms)', size = 30, weight = 'bold')
+    plt.xlabel('Size per region (B)', size = 40, weight = 'bold')
+    plt.ylabel('Time (s)', size = 40, weight = 'bold')
 
-    plt.xticks(size = 25, weight = 'bold')
-    plt.yticks(size = 25, weight = 'bold')
+    plt.xticks(size = 35, weight = 'bold')
+    plt.yticks(size = 35, weight = 'bold')
 
     plt.show()
 
@@ -266,18 +277,18 @@ def plot_mhelper_memcpybw(input_data):
 
     plt.legend(zip(*legend_list)[0], zip(*legend_list)[1],
         loc = 'upper left',
-        prop = matplotlib.font_manager.FontProperties(size = 30, weight = 'bold')
+        prop = matplotlib.font_manager.FontProperties(size = 40, weight = 'bold')
     )
     plt.xscale('log', basex = 2)
     plt.yscale('log', basey = 10)
     plt.xlim(xmin = 0)
     plt.ylim(ymin = 0)
 
-    plt.xlabel('Size per calls (B)', size = 30, weight = 'bold')
-    plt.ylabel('Time (s)', size = 30, weight = 'bold')
+    plt.xlabel('Size per calls (B)', size = 40, weight = 'bold')
+    plt.ylabel('Time (s)', size = 40, weight = 'bold')
 
-    plt.xticks(size = 25, weight = 'bold')
-    plt.yticks(size = 25, weight = 'bold')
+    plt.xticks(size = 35, weight = 'bold')
+    plt.yticks(size = 35, weight = 'bold')
 
     plt.show()
 
