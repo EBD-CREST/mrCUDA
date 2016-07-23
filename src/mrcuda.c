@@ -318,14 +318,14 @@ void mrcuda_init()
             REPORT_ERROR_AND_EXIT("Cannot allocate space for mrcudaSymNvidia.\n");
         
         // Create handles for CUDA libraries.
-        mrcudaSymNvidia->handler.symHandler = dlopen(__nvidiaLibPath, RTLD_NOW | RTLD_GLOBAL);
+        mrcudaSymNvidia->handler.symHandler = dlopen(__nvidiaLibPath, RTLD_NOW);
         if (mrcudaSymNvidia->handler.symHandler == NULL)
             REPORT_ERROR_AND_EXIT("Cannot sym-link mrcudaSymNvidia.\n");
 
-        mrcudaSymRCUDA->handler.symHandler = dlopen(__rCUDALibPath, RTLD_NOW | RTLD_GLOBAL);
+        mrcudaSymRCUDA->handler.symHandler = dlopen(__rCUDALibPath, RTLD_NOW);
         if (mrcudaSymRCUDA->handler.symHandler == NULL)
             REPORT_ERROR_AND_EXIT("Cannot sym-link mrcudaSymRCUDA.\n");
-        
+
         // Symlink rCUDA and CUDA functions.
         __symlink_handle(mrcudaSymRCUDA);
         __symlink_handle(mrcudaSymNvidia);
@@ -373,6 +373,8 @@ void mrcuda_init()
             mrcudaGPUList[i].switchThreshold = (int)strtol(tmp, &endptr, 10);
             if (*endptr != '\0')
                 REPORT_ERROR_AND_EXIT("%s's value is not valid.\n", envName);
+            if (pthread_mutex_init(&(mrcudaGPUList[i].mutex), NULL) != 0)
+                REPORT_ERROR_AND_EXIT("Cannot initialize the mutex of GPU %d.\n", i);
         }
 
         // Initialize the record/replay module.
@@ -415,6 +417,7 @@ int mrcuda_fini()
         for (i = 0; i < mrcudaNumGPUs; i++) {
             if (mrcudaGPUList[i].status == MRCUDA_GPU_STATUS_HELPER)
                 mhelper_destroy(mrcudaGPUList[i].mhelperProcess);
+            pthread_mutex_destroy(&(mrcudaGPUList[i].mutex));
         }
 
         mrcuda_record_fini();

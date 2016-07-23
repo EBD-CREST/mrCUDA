@@ -1,6 +1,7 @@
 #ifndef __MRCUDA_DATATYPES__HEADER__
 #define __MRCUDA_DATATYPES__HEADER__
 
+#include <cuda.h>
 #include <cuda_runtime.h>
 #include <glib.h>
 #include <sys/shm.h>

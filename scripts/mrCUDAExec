@@ -34,13 +34,13 @@ def parse_args():
     )
     parser.add_option('--rcuda-libcudart',
         dest = 'rcuda_libcudart',
-        default = '/home/pak/src/rCUDA/rCUDA-5.0/framework/rCUDAl/libcudart.so',
-        help = 'rCUDA\'s libcudart.so path [default = \'/home/pak/src/rCUDA/rCUDA-5.0/framework/rCUDAl/libcudart.so\']'
+        default = '/home/pak/Projects/rCUDAv15.07-CUDA7.0/lib/libcudart.so',
+        help = 'rCUDA\'s libcudart.so path [default = \'/home/pak/Projects/rCUDAv15.07-CUDA7.0/lib/libcudart.so\']'
     )
     parser.add_option('--nvidia-libcudart',
         dest = 'nvidia_libcudart',
-        default = '/usr/local/cuda-6.5/lib64/libcudart.so',
-        help = 'NVIDIA\'s libcudart.so path [default = \'/usr/local/cuda-6.5/lib64/libcudart.so\']'
+        default = '/usr/local/cuda-7.0/lib64/libcudart.so',
+        help = 'NVIDIA\'s libcudart.so path [default = \'/usr/local/cuda-7.0/lib64/libcudart.so\']'
     )
     parser.add_option('--switch-threshold', type = 'int',
         dest = 'switch_threshold',

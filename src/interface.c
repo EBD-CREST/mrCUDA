@@ -237,15 +237,14 @@ extern __host__ cudaError_t CUDARTAPI cudaHostAlloc(void **pHost, size_t size, u
 {
     MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
-    void *pHost1;
-    mrcuda_function_call_lock(gpu);
+    //mrcuda_function_call_lock(gpu);
     ret = gpu->defaultHandler->mrcudaHostAlloc(pHost, size, flags);
     if (!gpu->nativeFromStart)
         // This function has to be recorded regardless we are using rCUDA or not.
         // This ensures that we calls cudaFreeHost using the right library (rCUDA or native).
         // However, GPUs that are running natively from the start don't need to be recorded.
         mrcuda_record_cudaHostAlloc(gpu, pHost, size, flags);
-    mrcuda_function_call_release(gpu);
+    //mrcuda_function_call_release(gpu);
     return ret;
 }
 
@@ -269,13 +268,13 @@ extern __host__ cudaError_t CUDARTAPI cudaFreeHost(void *ptr)
 {
     MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
-    mrcuda_function_call_lock(gpu);
+    //mrcuda_function_call_lock(gpu);
     if (!gpu->nativeFromStart)
         // Call the right library of cudaFreeHost according to the recorded cudaHostAlloc calls.
         mrcuda_replay_cudaFreeHost(gpu, ptr)->mrcudaFreeHost(ptr);
     else
         gpu->defaultHandler->mrcudaFreeHost(ptr);
-    mrcuda_function_call_release(gpu);
+    //mrcuda_function_call_release(gpu);
     return ret;
 }
 
@@ -454,7 +453,7 @@ extern __host__ cudaError_t CUDARTAPI cudaSetDevice(int device)
 /**
  * Interface of cudaSetDeviceFlags.
  */
-extern __host__ cudaError_t CUDARTAPI cudaSetDeviceFlags( unsigned int flags )
+extern __host__ cudaError_t CUDARTAPI cudaSetDeviceFlags(unsigned int flags)
 {
     MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
@@ -484,15 +483,11 @@ extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaGetDevice(int *devi
  */
 extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaGetDeviceCount(int *count)
 {
-    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
-    cudaError_t ret;
-    mrcuda_function_call_lock(gpu);
-    ret = gpu->defaultHandler->mrcudaGetDeviceCount(count);
-    mrcuda_function_call_release(gpu);
-    return ret;
+    *count = mrcudaNumGPUs;
+    return cudaSuccess;
 }
 
-cudaError_t cudaDeviceSynchronize(void)
+extern __host__ __cudart_builtin__ cudaError_t cudaDeviceSynchronize(void)
 {
     MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
     cudaError_t ret;
@@ -502,3 +497,67 @@ cudaError_t cudaDeviceSynchronize(void)
     return ret;
 }
 
+/**
+ * Interface of cudaDeviceReset.
+ */
+extern __host__ cudaError_t CUDARTAPI cudaDeviceReset(void)
+{
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
+    cudaError_t ret;
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaDeviceReset();
+    mrcuda_function_call_release(gpu);
+    return ret;
+}
+
+/**
+ * Interface of cudaEventCreate.
+ */
+extern __host__ cudaError_t CUDARTAPI cudaEventCreate(cudaEvent_t *event)
+{
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
+    cudaError_t ret;
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaEventCreate(event);
+    mrcuda_function_call_release(gpu);
+    return ret;
+}
+
+/**
+ * Interface of cudaEventRecord.
+ */
+extern __host__ cudaError_t CUDARTAPI cudaEventRecord(cudaEvent_t event,  cudaStream_t stream)
+{
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
+    cudaError_t ret;
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaEventRecord(event, stream);
+    mrcuda_function_call_release(gpu);
+    return ret;
+}
+
+/**
+ * Interface of cudaEventSynchronize.
+ */
+extern __host__ cudaError_t CUDARTAPI cudaEventSynchronize(cudaEvent_t event)
+{
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
+    cudaError_t ret;
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaEventSynchronize(event);
+    mrcuda_function_call_release(gpu);
+    return ret;
+}
+
+/**
+ * Interface of cudaEventElapsedTime.
+ */
+extern __host__ cudaError_t CUDARTAPI cudaEventElapsedTime(float *ms,  cudaEvent_t start,  cudaEvent_t end)
+{
+    MRCUDAGPU_t *gpu = mrcuda_get_current_gpu();
+    cudaError_t ret;
+    mrcuda_function_call_lock(gpu);
+    ret = gpu->defaultHandler->mrcudaEventElapsedTime(ms, start, end);
+    mrcuda_function_call_release(gpu);
+    return ret;
+}
