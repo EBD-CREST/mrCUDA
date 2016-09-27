@@ -15,6 +15,30 @@ AC_ARG_WITH([rcuda], [
     )
 ])
 
+AC_ARG_WITH([nvcc], [
+    AS_HELP_STRING([--with-nvcc=[nvcc]],
+        [optionally specify nvcc you want to use.]
+    )], [
+        AC_SUBST(NVCC, "${with_nvcc}")
+    ], [
+        AC_PATH_PROG(NVCC, nvcc, no)
+        if test x"${NVCC}" == x"no"; then
+            AC_MSG_ERROR([Cannot find nvcc.])
+        fi
+])
+
+AC_ARG_WITH([libcudart], [
+    AS_HELP_STRING([--with-libcudart=[libcudart]],
+        [optionally specify CUDA libcudart you want to use.]
+    )], [
+        AC_SUBST(NVIDIA_LIBCUDART, "${with_libcudart}")
+    ], [
+        AC_PATH_PROG(NVIDIA_LIBCUDART, libcudart.so, no, [$LD_LIBRARY_PATH$PATH_SEPARATOR$LIBRARY_PATH])
+        if test x"${NVIDIA_LIBCUDART}" == x"no"; then
+            AC_MSG_ERROR([Cannot find CUDA's libcudart.so.])
+        fi
+])
+
 AC_ARG_ENABLE([debug],
     AS_HELP_STRING([--enable-debug], [Enable debug output]))
 AS_IF([test "x$enable_debug" = "xyes"], [
@@ -27,11 +51,6 @@ AM_PROG_CC_C_O
 AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_LN_S
-
-AC_PATH_PROG(NVCC, nvcc)
-if test x"${NVCC}" == x"no"; then
-    AC_MSG_ERROR([Cannot find nvcc.])
-fi
 
 AC_PATH_PROG(RCUDA_RCUDACOMMIB, rCUDAcommIB.so, no, [$with_rcuda/lib$PATH_SEPARATOR$PATH])
 if test x"${RCUDA_RCUDACOMMIB}" == x"no"; then
