@@ -14,8 +14,8 @@ AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_LN_S
 
-AC_CHECK_PROG(NVCC, nvcc, nvcc)
-if test x"${NVCC}" != x"nvcc"; then
+AC_PATH_PROG(NVCC, nvcc)
+if test x"${NVCC}" == x"no"; then
     AC_MSG_ERROR([Cannot find nvcc.])
 fi
 
