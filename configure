@@ -670,6 +670,9 @@ CHECK_CFLAGS
 PKG_CONFIG_LIBDIR
 PKG_CONFIG_PATH
 PKG_CONFIG
+RCUDA_LIBCUDART
+RCUDA_RCUDACOMMTCP
+RCUDA_RCUDACOMMIB
 NVCC
 LN_S
 am__fastdepCC_FALSE
@@ -761,16 +764,17 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 enable_silent_rules
-enable_dependency_tracking
 enable_shared
 enable_static
+with_rcuda
+enable_debug
+enable_dependency_tracking
 with_pic
 enable_fast_install
 with_aix_soname
 with_gnu_ld
 with_sysroot
 enable_libtool_lock
-enable_debug
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1420,20 +1424,23 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-silent-rules   less verbose build output (undo: "make V=1")
   --disable-silent-rules  verbose build output (undo: "make V=0")
+  --enable-shared[=PKGS]  build shared libraries [default=yes]
+  --enable-static[=PKGS]  build static libraries [default=no]
+  --enable-debug          Enable debug output
   --enable-dependency-tracking
                           do not reject slow dependency extractors
   --disable-dependency-tracking
                           speeds up one-time build
-  --enable-shared[=PKGS]  build shared libraries [default=yes]
-  --enable-static[=PKGS]  build static libraries [default=yes]
   --enable-fast-install[=PKGS]
                           optimize for fast installation [default=yes]
   --disable-libtool-lock  avoid locking (might break parallel builds)
-  --enable-debug          Enable debug output
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+
+      --with-rcuda=RCUDA_PATH optionally specify the installation path of rCUDA.
+
   --with-pic[=PKGS]       try to use only PIC/non-PIC objects [default=use
                           both]
   --with-aix-soname=aix|svr4|both
@@ -2915,6 +2922,88 @@ ac_config_headers="$ac_config_headers config.h"
 
 ac_config_files="$ac_config_files Makefile src/Makefile tests/Makefile"
 
+# Check whether --enable-shared was given.
+if test "${enable_shared+set}" = set; then :
+  enableval=$enable_shared; p=${PACKAGE-default}
+    case $enableval in
+    yes) enable_shared=yes ;;
+    no) enable_shared=no ;;
+    *)
+      enable_shared=no
+      # Look at the argument we got.  We use all the common list separators.
+      lt_save_ifs=$IFS; IFS=$IFS$PATH_SEPARATOR,
+      for pkg in $enableval; do
+	IFS=$lt_save_ifs
+	if test "X$pkg" = "X$p"; then
+	  enable_shared=yes
+	fi
+      done
+      IFS=$lt_save_ifs
+      ;;
+    esac
+else
+  enable_shared=yes
+fi
+
+
+
+
+
+
+
+
+
+# Check whether --enable-static was given.
+if test "${enable_static+set}" = set; then :
+  enableval=$enable_static; p=${PACKAGE-default}
+    case $enableval in
+    yes) enable_static=yes ;;
+    no) enable_static=no ;;
+    *)
+     enable_static=no
+      # Look at the argument we got.  We use all the common list separators.
+      lt_save_ifs=$IFS; IFS=$IFS$PATH_SEPARATOR,
+      for pkg in $enableval; do
+	IFS=$lt_save_ifs
+	if test "X$pkg" = "X$p"; then
+	  enable_static=yes
+	fi
+      done
+      IFS=$lt_save_ifs
+      ;;
+    esac
+else
+  enable_static=no
+fi
+
+
+
+
+
+
+
+
+
+
+
+# Check whether --with-rcuda was given.
+if test "${with_rcuda+set}" = set; then :
+  withval=$with_rcuda;
+fi
+
+
+# Check whether --enable-debug was given.
+if test "${enable_debug+set}" = set; then :
+  enableval=$enable_debug;
+fi
+
+if test "x$enable_debug" = "xyes"; then :
+
+
+$as_echo "#define DEBUG 1" >>confdefs.h
+
+
+fi
 
 # Checks for programs
 DEPDIR="${am__leading_dot}deps"
@@ -4912,6 +5001,142 @@ if test x"${NVCC}" == x"no"; then
     as_fn_error $? "Cannot find nvcc." "$LINENO" 5
 fi
 
+# Extract the first word of "rCUDAcommIB.so", so it can be a program name with args.
+set dummy rCUDAcommIB.so; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_RCUDA_RCUDACOMMIB+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $RCUDA_RCUDACOMMIB in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_RCUDA_RCUDACOMMIB="$RCUDA_RCUDACOMMIB" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $with_rcuda/lib$PATH_SEPARATOR$PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_RCUDA_RCUDACOMMIB="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_path_RCUDA_RCUDACOMMIB" && ac_cv_path_RCUDA_RCUDACOMMIB="no"
+  ;;
+esac
+fi
+RCUDA_RCUDACOMMIB=$ac_cv_path_RCUDA_RCUDACOMMIB
+if test -n "$RCUDA_RCUDACOMMIB"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $RCUDA_RCUDACOMMIB" >&5
+$as_echo "$RCUDA_RCUDACOMMIB" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+if test x"${RCUDA_RCUDACOMMIB}" == x"no"; then
+    as_fn_error $? "Cannot find rCUDA. Make sure rCUDA is installed on your system." "$LINENO" 5
+fi
+
+# Extract the first word of "rCUDAcommTCP.so", so it can be a program name with args.
+set dummy rCUDAcommTCP.so; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_RCUDA_RCUDACOMMTCP+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $RCUDA_RCUDACOMMTCP in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_RCUDA_RCUDACOMMTCP="$RCUDA_RCUDACOMMTCP" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $with_rcuda/lib$PATH_SEPARATOR$PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_RCUDA_RCUDACOMMTCP="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_path_RCUDA_RCUDACOMMTCP" && ac_cv_path_RCUDA_RCUDACOMMTCP="no"
+  ;;
+esac
+fi
+RCUDA_RCUDACOMMTCP=$ac_cv_path_RCUDA_RCUDACOMMTCP
+if test -n "$RCUDA_RCUDACOMMTCP"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $RCUDA_RCUDACOMMTCP" >&5
+$as_echo "$RCUDA_RCUDACOMMTCP" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+if test x"${RCUDA_RCUDACOMMTCP}" == x"no"; then
+    as_fn_error $? "Cannot find rCUDA. Make sure rCUDA is installed on your system." "$LINENO" 5
+fi
+
+# Extract the first word of "libcudart.so", so it can be a program name with args.
+set dummy libcudart.so; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_RCUDA_LIBCUDART+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $RCUDA_LIBCUDART in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_RCUDA_LIBCUDART="$RCUDA_LIBCUDART" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $with_rcuda/lib$PATH_SEPARATOR$PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_RCUDA_LIBCUDART="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_path_RCUDA_LIBCUDART" && ac_cv_path_RCUDA_LIBCUDART="no"
+  ;;
+esac
+fi
+RCUDA_LIBCUDART=$ac_cv_path_RCUDA_LIBCUDART
+if test -n "$RCUDA_LIBCUDART"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $RCUDA_LIBCUDART" >&5
+$as_echo "$RCUDA_LIBCUDART" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+if test x"${RCUDA_LIBCUDART}" == x"no"; then
+    as_fn_error $? "Cannot find rCUDA. Make sure rCUDA is installed on your system." "$LINENO" 5
+fi
+
+# Checks for modules
 
 
 
@@ -8983,66 +9208,6 @@ done
 
 
   enable_win32_dll=no
-
-
-            # Check whether --enable-shared was given.
-if test "${enable_shared+set}" = set; then :
-  enableval=$enable_shared; p=${PACKAGE-default}
-    case $enableval in
-    yes) enable_shared=yes ;;
-    no) enable_shared=no ;;
-    *)
-      enable_shared=no
-      # Look at the argument we got.  We use all the common list separators.
-      lt_save_ifs=$IFS; IFS=$IFS$PATH_SEPARATOR,
-      for pkg in $enableval; do
-	IFS=$lt_save_ifs
-	if test "X$pkg" = "X$p"; then
-	  enable_shared=yes
-	fi
-      done
-      IFS=$lt_save_ifs
-      ;;
-    esac
-else
-  enable_shared=yes
-fi
-
-
-
-
-
-
-
-
-
-  # Check whether --enable-static was given.
-if test "${enable_static+set}" = set; then :
-  enableval=$enable_static; p=${PACKAGE-default}
-    case $enableval in
-    yes) enable_static=yes ;;
-    no) enable_static=no ;;
-    *)
-     enable_static=no
-      # Look at the argument we got.  We use all the common list separators.
-      lt_save_ifs=$IFS; IFS=$IFS$PATH_SEPARATOR,
-      for pkg in $enableval; do
-	IFS=$lt_save_ifs
-	if test "X$pkg" = "X$p"; then
-	  enable_static=yes
-	fi
-      done
-      IFS=$lt_save_ifs
-      ;;
-    esac
-else
-  enable_static=yes
-fi
-
-
-
-
-
 
 
 
@@ -13288,77 +13453,6 @@ CC=$lt_save_CC
 
 
 
-# Check whether --enable-debug was given.
-if test "${enable_debug+set}" = set; then :
-  enableval=$enable_debug;
-fi
-
-
-if test "x$enable_debug" = "xyes"; then :
-
-
-$as_echo "#define DEBUG 1" >>confdefs.h
-
-
-fi
-
-# Check whether --enable-shared was given.
-if test "${enable_shared+set}" = set; then :
-  enableval=$enable_shared; p=${PACKAGE-default}
-    case $enableval in
-    yes) enable_shared=yes ;;
-    no) enable_shared=no ;;
-    *)
-      enable_shared=no
-      # Look at the argument we got.  We use all the common list separators.
-      lt_save_ifs=$IFS; IFS=$IFS$PATH_SEPARATOR,
-      for pkg in $enableval; do
-	IFS=$lt_save_ifs
-	if test "X$pkg" = "X$p"; then
-	  enable_shared=yes
-	fi
-      done
-      IFS=$lt_save_ifs
-      ;;
-    esac
-else
-  enable_shared=yes
-fi
-
-
-
-
-
-
-# Check whether --enable-static was given.
-if test "${enable_static+set}" = set; then :
-  enableval=$enable_static; p=${PACKAGE-default}
-    case $enableval in
-    yes) enable_static=yes ;;
-    no) enable_static=no ;;
-    *)
-     enable_static=no
-      # Look at the argument we got.  We use all the common list separators.
-      lt_save_ifs=$IFS; IFS=$IFS$PATH_SEPARATOR,
-      for pkg in $enableval; do
-	IFS=$lt_save_ifs
-	if test "X$pkg" = "X$p"; then
-	  enable_static=yes
-	fi
-      done
-      IFS=$lt_save_ifs
-      ;;
-    esac
-else
-  enable_static=no
-fi
-
-
-
-
-
-
-
 # Checks for libraries.
 # FIXME: Replace `main' with a function in `-lcuda':
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for cuCtxCreate in -lcuda" >&5
@@ -14660,10 +14754,10 @@ AMDEP_TRUE="$AMDEP_TRUE" ac_aux_dir="$ac_aux_dir"
 sed_quote_subst='$sed_quote_subst'
 double_quote_subst='$double_quote_subst'
 delay_variable_subst='$delay_variable_subst'
-macro_version='`$ECHO "$macro_version" | $SED "$delay_single_quote_subst"`'
-macro_revision='`$ECHO "$macro_revision" | $SED "$delay_single_quote_subst"`'
 enable_shared='`$ECHO "$enable_shared" | $SED "$delay_single_quote_subst"`'
 enable_static='`$ECHO "$enable_static" | $SED "$delay_single_quote_subst"`'
+macro_version='`$ECHO "$macro_version" | $SED "$delay_single_quote_subst"`'
+macro_revision='`$ECHO "$macro_revision" | $SED "$delay_single_quote_subst"`'
 pic_mode='`$ECHO "$pic_mode" | $SED "$delay_single_quote_subst"`'
 enable_fast_install='`$ECHO "$enable_fast_install" | $SED "$delay_single_quote_subst"`'
 shared_archive_member_spec='`$ECHO "$shared_archive_member_spec" | $SED "$delay_single_quote_subst"`'
@@ -15689,15 +15783,15 @@ available_tags=''
 
 # ### BEGIN LIBTOOL CONFIG
 
-# Which release of libtool.m4 was used?
-macro_version=$macro_version
-macro_revision=$macro_revision
-
 # Whether or not to build shared libraries.
 build_libtool_libs=$enable_shared
 
 # Whether or not to build static libraries.
 build_old_libs=$enable_static
+
+# Which release of libtool.m4 was used?
+macro_version=$macro_version
+macro_revision=$macro_revision
 
 # What type of objects to build.
 pic_mode=$pic_mode

@@ -6,6 +6,20 @@ AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_MACRO_DIR([build-aux])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile])
+AC_ENABLE_SHARED(yes)
+AC_ENABLE_STATIC(no)
+
+AC_ARG_WITH([rcuda], [
+    AS_HELP_STRING([--with-rcuda=[RCUDA_PATH]],
+        [optionally specify the installation path of rCUDA.]
+    )
+])
+
+AC_ARG_ENABLE([debug],
+    AS_HELP_STRING([--enable-debug], [Enable debug output]))
+AS_IF([test "x$enable_debug" = "xyes"], [
+    AC_DEFINE(DEBUG, 1, [Define if --enable-debug option is found.])
+])
 
 # Checks for programs
 AM_PROG_AR
@@ -19,19 +33,25 @@ if test x"${NVCC}" == x"no"; then
     AC_MSG_ERROR([Cannot find nvcc.])
 fi
 
+AC_PATH_PROG(RCUDA_RCUDACOMMIB, rCUDAcommIB.so, no, [$with_rcuda/lib$PATH_SEPARATOR$PATH])
+if test x"${RCUDA_RCUDACOMMIB}" == x"no"; then
+    AC_MSG_ERROR([Cannot find rCUDA. Make sure rCUDA is installed on your system.])
+fi
+
+AC_PATH_PROG(RCUDA_RCUDACOMMTCP, rCUDAcommTCP.so, no, [$with_rcuda/lib$PATH_SEPARATOR$PATH])
+if test x"${RCUDA_RCUDACOMMTCP}" == x"no"; then
+    AC_MSG_ERROR([Cannot find rCUDA. Make sure rCUDA is installed on your system.])
+fi
+
+AC_PATH_PROG(RCUDA_LIBCUDART, libcudart.so, no, [$with_rcuda/lib$PATH_SEPARATOR$PATH])
+if test x"${RCUDA_LIBCUDART}" == x"no"; then
+    AC_MSG_ERROR([Cannot find rCUDA. Make sure rCUDA is installed on your system.])
+fi
+
+# Checks for modules
 PKG_CHECK_MODULES([CHECK], [check >= 0.9.4])
 PKG_CHECK_MODULES([DEPS], [glib-2.0 >= 2.24.1])
 LT_INIT
-
-AC_ARG_ENABLE([debug],
-    AS_HELP_STRING([--enable-debug], [Enable debug output]))
-
-AS_IF([test "x$enable_debug" = "xyes"], [
-    AC_DEFINE(DEBUG, 1, [Define if --enable-debug option is found.])
-])
-
-AC_ENABLE_SHARED(yes)
-AC_ENABLE_STATIC(no)
 
 # Checks for libraries.
 # FIXME: Replace `main' with a function in `-lcuda':
