@@ -4,9 +4,6 @@
 src/libcudart.so.5.0
 lib64/*
 build/*
-build-aux/*
-Makefile.in
 aclocal.m4
 autom4te.cache
-configure
 config.h.in*

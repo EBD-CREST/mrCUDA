@@ -1,11 +1,11 @@
 #ifndef __MRCUDA_COMMON__HEADER__
 #define __MRCUDA_COMMON__HEADER__
 
+#include <config.h>
+
 #include <stdio.h>
 #include <glib.h>
 #include <sys/time.h>
-
-#include <config.h>
 
 #if DEBUG
     #define DPRINTF(fmt, ...) \
