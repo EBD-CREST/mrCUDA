@@ -102,7 +102,7 @@ def plot_memsync(input_data):
     plt.xlim(xmin = 0)
     plt.ylim(ymin = 0)
 
-    plt.xlabel('Size per region (B)', size = 40, weight = 'bold')
+    plt.xlabel('$\mathbf{data\_size_i}$ (B)', size = 40, weight = 'bold')
     plt.ylabel('Time (s)', size = 40, weight = 'bold')
 
     plt.xticks(size = 35, weight = 'bold')
@@ -370,7 +370,7 @@ def plot_record_replay(input_data):
     ax1.set_ylim(ymin = 0)
     ax2.set_ylim(ymin = 0)
 
-    ax1.set_xlabel('Number of calls (x10,000)', size = 30, weight = 'bold')
+    ax1.set_xlabel('num_record (x10,000)', size = 30, weight = 'bold')
     ax1.set_ylabel('Record Time (ms)', size = 30, weight = 'bold')
     ax2.set_ylabel('Replay Time (s)', size = 30, weight = 'bold')
 
