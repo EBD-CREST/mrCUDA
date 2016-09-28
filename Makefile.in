@@ -352,7 +352,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 ACLOCAL_AMFLAGS = -I build-aux
-SUBDIRS = src . tests
+SUBDIRS = src . tests scripts
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 

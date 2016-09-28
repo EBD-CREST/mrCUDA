@@ -6,6 +6,7 @@ import subprocess
 from optparse import OptionParser
 
 framework_directory = os.path.dirname(os.path.abspath(__file__))
+framework_lib_directory = '{{ MRCUDA_LIBPATH }}'
 
 def parse_args():
     parser = OptionParser(usage = '%prog -s SERVER [options] -- PROGRAM')
@@ -34,13 +35,13 @@ def parse_args():
     )
     parser.add_option('--rcuda-libcudart',
         dest = 'rcuda_libcudart',
-        default = '/home/pak/Projects/rCUDAv15.07-CUDA7.0/lib/libcudart.so',
-        help = 'rCUDA\'s libcudart.so path [default = \'/home/pak/Projects/rCUDAv15.07-CUDA7.0/lib/libcudart.so\']'
+        default = '{{ RCUDA_LIBCUDART }}',
+        help = 'rCUDA\'s libcudart.so path [default = \'{{ RCUDA_LIBCUDART }}\']'
     )
     parser.add_option('--nvidia-libcudart',
         dest = 'nvidia_libcudart',
-        default = '/usr/local/cuda-7.0/lib64/libcudart.so',
-        help = 'NVIDIA\'s libcudart.so path [default = \'/usr/local/cuda-7.0/lib64/libcudart.so\']'
+        default = '{{ NVIDIA_LIBCUDART }}',
+        help = 'NVIDIA\'s libcudart.so path [default = \'{{ NVIDIA_LIBCUDART }}\']'
     )
     parser.add_option('--switch-threshold', type = 'int',
         dest = 'switch_threshold',
@@ -73,7 +74,6 @@ def parse_args():
     return options, args
 
 def main(options, args):
-    framework_lib_directory = os.path.join(framework_directory, 'lib64') 
     ld_lib_path = framework_lib_directory
 
     program_args = args
