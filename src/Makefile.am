@@ -13,6 +13,6 @@ libcomm_a_SOURCES = comm.c comm.h common.h
 libcomm_a_CPPFLAGS = -lpthread -pthread $(DEPS_CFLAGS)
 
 install-exec-hook:
-	${LN_S} ${RCUDA_RCUDACOMMIB} ${libdir}/rCUDAcommIB.so
-	${LN_S} ${RCUDA_RCUDACOMMTCP} ${libdir}/rCUDAcommTCP.so
+	${LN_S} ${RCUDA_RCUDACOMMIB} ${libdir}
+	${LN_S} ${RCUDA_RCUDACOMMTCP} ${libdir}
 

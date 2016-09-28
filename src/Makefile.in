@@ -895,8 +895,8 @@ uninstall-am: uninstall-binPROGRAMS uninstall-libLIBRARIES \
 
 
 install-exec-hook:
-	${LN_S} ${RCUDA_RCUDACOMMIB} ${libdir}/rCUDAcommIB.so
-	${LN_S} ${RCUDA_RCUDACOMMTCP} ${libdir}/rCUDAcommTCP.so
+	${LN_S} ${RCUDA_RCUDACOMMIB} ${libdir}
+	${LN_S} ${RCUDA_RCUDACOMMTCP} ${libdir}
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
