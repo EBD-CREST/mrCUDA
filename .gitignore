@@ -4,6 +4,5 @@
 src/libcudart.so.5.0
 lib64/*
 build/*
-aclocal.m4
 autom4te.cache
 config.h.in*
