@@ -39,8 +39,8 @@ AS_IF([test "x$enable_debug" = "xyes"], [
 
 # Checks for programs
 AM_PROG_AR
-AM_PROG_CC_C_O
 AC_PROG_CC
+AM_PROG_CC_C_O
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AM_PATH_PYTHON([2.7])
