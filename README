@@ -1,0 +1,89 @@
+mrCUDA: Migratable rCUDA
+
+What is it?
+===========
+
+mrCUDA is an extension of rCUDA (http://rcuda.net), which aims at enabling
+remote-to-local GPU migration. We develop this project in order to solve the
+performance problems caused by remote GPU communication: overhead from rCUDA,
+and network congestion. By using mrCUDA, a user can migrate execution on a
+remote GPU to a local GPU when one becomes available. mrCUDA works seamlessly
+with rCUDA and programs that use CUDA Runtime API. There is no need to recompile
+the program in order to use mrCUDA. More information regarding mrCUDA can be
+found in:
+
+*   Pak Markthub, Akihiro Nomura, and Satoshi Matsuoka. "Serving More GPU Jobs, with
+    Low Penalty, using Remote GPU Execution and Migration." IEEE Cluster 2016.
+
+*   Pak Markthub, Akihiro Nomura, and Satoshi Matsuoka. "Finishing GPU Jobs
+    running on a Multi-GPU Batch-Queue Node-Sharing System Earlier with Remote
+    GPU Execution and Migration." ISC2016.
+
+*   Pak Markthub, Akihiro Nomura, and Satoshi Matsuoka. "Reducing Remote GPU
+    Execution's Overhead with mrCUDA." GTC2016.
+
+*   Pak Markthub, Akihiro Nomura, and Satoshi Matsuoka. "Serving More GPU Jobs
+    in Multi-GPU Batch-Queue Systems using Remote GPU Execution and Migration
+    (Unrefereed Workshop manuscript)." IPSJ SIG Notes 2016-HPC-153.
+
+*   Pak Markthub, Akihiro Nomura, and Satoshi Matsuoka. "mrCUDA: Low-Overhead
+    Middleware for Transparently Migrating CUDA Execution from Remote to Local
+    GPUs." SC15.
+
+*   Pak Markthub, Akihiro Nomura, and Satoshi Matsuoka. "mrCUDA: Low-Overhead
+    Middleware for Transparently Migrating CUDA Execution from Remote to Local
+    GPUs." GTC Japan 2015.
+
+*   Pak Markthub, Akihiro Nomura, and Satoshi Matsuoka. "mrCUDA: A middleware
+    for migrating rCUDA virtual GPUs to native GPUs (Unrefereed Workshop
+    manuscript)." IPSJ SIG Notes 2015-HPC-150 (SWoPP2015).
+
+Installation
+============
+
+Prerequisites
+-------------
+
+- check
+- CUDA7.0
+- glibc-2.0 
+- Python2.7
+- rCUDAv15.07
+
+How to install
+--------------
+
+mkdir build
+cd build
+../configure --prefix=~/mrCUDA-bin --with-rcuda=<path-to-rcuda-top-most-directory>
+make
+make install
+
+Note: We recommend you to specify --prefix because mrCUDA creates its own
+libcudart.so that might conflict with the installed libcudart.so from NVIDIA on
+your system.
+
+How to use?
+===========
+
+1. Make sure your program works with rCUDAv15.07.
+2. Start rCUDAd on a node.
+3. Go to mrCUDA's installed directory.
+4. cd bin
+5. ./mrcudaexec -s <rCUDAd-IP-Address> -t <communication-type IB or TCP> \
+   --switch-threshold=<number> -- <your-program> <your-program-arguments>
+
+Notes: 
+1. By specifying --switch-threshold, mrCUDA will automatically migrate execution
+   when it encounters 'cudaLaunch' more than the specified number. This is helpful
+   for testing mrCUDA's migration functionality.
+
+2. In future release, mrCUDA will create a UNIX socket that you can send a
+   migration command in to start GPU migration.
+
+Acknowledgement
+===============
+
+This research was supported by JST, CREST (Research Area: Advanced Core
+Technologies for Big Data Integration).
+

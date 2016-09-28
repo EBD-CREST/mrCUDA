@@ -1,0 +1,5 @@
+2016-09-28  Pak Markthub <markthub.p.aa@m.titech.ac.jp>
+* This is the first alpha release version.
+* mrCUDA supports multi-GPU remote-to-local GPU migration.
+* Only a subset of CUDA Runtime APIs v7.0 are supported, but at least they are enough for LAMMPS to run without problem.
+

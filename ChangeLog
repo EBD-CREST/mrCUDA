@@ -1,0 +1,86 @@
+2016-09-28  Pak Markthub <markthub.p.aa@m.titech.ac.jp>
+
+* all git log before the creation of this ChangeLog
+c617dd9 (HEAD -> installation, origin/installation) Create libcudart.so.7.0 symlink when installing mrCUDA
+c4ae1ca Regenerate all make and configuration scripts on Paris, hopefully it will work fine with other systems
+1cdc3ea Add missing files
+6b6cf38 Modify related files in the installation process
+c01849a Add missing files necessary for configure and make
+f1508e4 Add the missing config.h.in
+0bcd211 Add the missing aclocal.m4
+c45bd5a Make the generation of the linked filenames of rCUDAcomm*.so more generic
+cdf5ed4 Create links to rCUDAcommIB.so and rCUDAcommTCP.so when installing mrCUDA
+cb954e8 Make now auto-generates correct mrcudaexec
+77893c0 Check for python2.7 in configure
+d396f9d Add options for manually specifying NVIDIA's libcudart and nvcc
+0513643 Detect the installation path of rCUDA's libcudart.so, rCUDAcommIB.so, and rCUDAcommTCP.so
+332f4c9 Use absolute path for nvcc after checking
+b838985 Add checking for nvcc
+cf9a96f Create configure and its supported files
+3913e41 (origin/multi-gpu, origin/master, origin/HEAD, github/master, multi-gpu, master) Change the labels of memsync plotter.
+7e799ad Modify code so that it can run on Paris and matrixMul and vectorAdd can use mrCUDA
+aee10f1 Change the font size of some figures
+6bc4b07 Add benchmark scripts and programs for mrCUDA's overhead
+4bda4d0 Add manual profiling
+bcc42b6 Change many labels' sizes
+b2ff7c0 Add plot_record_replay to the overhead.py
+df634e0 Add plot_mhelper_memcpybw to the overhead.py
+ab7707e Add plot_mhelper_nullker to overhead.py
+151283b Get multi-GPU migration benchmark's results
+23dba8e Change the legend size in memsync-bw plot
+801d4a4 Implement memsync-bw plot in the overhead.py
+87ed363 Get memcpybw-memsync benchmark result
+4fa2a15 Add a plotter overhead.py
+2beb2e4 Remove cudaMemcpy and cudaMemcpyToSymbol profiling
+1709ea6 Add manual profiling
+a7f915a Fix mhelper does not exit when the main program exited
+342930e Fix cudaLaunch error bugs
+64ecbcb Fix cudaMemcpy bugs in mhelper
+544ee52 Fix mhelper does not set device bugs
+8c79e14 Fix mhelper communication bugs
+5473461 Fix deadlock in cudaSetDevice
+d7a6ad7 Implement mhelper.c
+2ee9d72 Implement intercomm_interface.c
+9ab3d67 Implement some interfaces in intercomm_interface
+f5f261e Fix runtime error when using switching for single GPU case
+aa2abf4 Fix runtime errors when using only rCUDA or native
+eddf55e Fix compliation errors
+32bb9b7 Refactor code to support multi-gpu migration
+b40b53a Implement __cudaRegisterFatBinary in mhelper
+5cab822 Partially implement mhelper
+fff4bf4 Implement intercomm.c
+b1dff8a Partially implement intercomm module
+7c32128 Implement intercomm_mem
+3263bce Roughly define data structures and functions
+5274e9e Merge branch 'rcuda-5.0'
+de3d5b2 (origin/rcuda-5.0) Implement multi-GPU matmul
+6b13153 Fix multiple reports of the total sizes of cudaMemcpy and cudaMemcpyToSymbol
+65c10b3 Add cudaMemcpy and cudaMemcpyToSymbol profiling
+facce7e Add mrcuda_record time
+fde0ad0 Remove cudaMemcpyToSymbol replay and use sync symbol instead
+50bdf0a Include mrcuda_replay_cudaMemcpyToSymbol to mrcuda_sync_mem profile
+0aa19c9 Implement manual profiling
+325623b Add mrcudaRecordCache
+953ae29 Implement mrCUDAExec
+7db0609 Add MRCUDA_SWITCH_THRESHOLD support for testing purpose
+c7ddadf Add cudaSetDeviceFlags support
+a1e7164 mrCUDA works with LAMMPS
+2a765b3 Fix sync_memory bugs
+c697d6a Unknown test code
+693042c Hard-code mrcuda_switching when num cudaLaunch reach a certain number
+cac9952 Fix segmentation-fault bug
+03e9535 Fix compile-error bugs
+b9170c3 Connect modules together
+94cfc0f Partially implement record and replay functions
+2fa6ed4 Partially implement recording system
+c0fdd22 Implement and test comm.c
+6335192 Use autotools as the make system
+6bb38d7 Partially implement communication module.
+7146ceb Implement function interfaces that are needed for LAMMPS
+c9e90a6 Implement mrcuda_init and mrcuda_fini
+1123ca9 Partially define some headers
+2c0e9f7 Change directory structure
+92fdc95 Modify matmul_par.cu to make successful migratio more obvious
+6ca6d5b Finish implementing rCUDA to native migration mini prototype
+40db4b4 Successfully run hellowolrd concurrently on rCUDA and native
+d116474 Create an example of libcudart's hook
