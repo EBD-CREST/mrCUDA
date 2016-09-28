@@ -2,7 +2,7 @@ AC_PREREQ([2.69])
 
 AC_INIT([mrcuda], [7.0.0], [markthub.p.aa@m.titech.ac.jp])
 AC_CONFIG_AUX_DIR([build-aux])
-AM_INIT_AUTOMAKE([foreign])
+AM_INIT_AUTOMAKE
 AC_CONFIG_MACRO_DIR([build-aux])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile scripts/Makefile])

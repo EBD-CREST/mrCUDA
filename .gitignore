@@ -5,3 +5,4 @@ src/libcudart.so.5.0
 lib64/*
 build/*
 autom4te.cache
+*~
